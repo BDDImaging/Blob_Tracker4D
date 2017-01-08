@@ -1,0 +1,12 @@
+version.o: /Users/varunkapoor/Downloads/gnuplot-5.0.3/src/version.c \
+  /Users/varunkapoor/Downloads/gnuplot-5.0.3/src/version.h \
+  /Users/varunkapoor/Downloads/gnuplot-5.0.3/src/syscfg.h ../config.h \
+  /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/7.3.0/include/stdbool.h
+
+/Users/varunkapoor/Downloads/gnuplot-5.0.3/src/version.h:
+
+/Users/varunkapoor/Downloads/gnuplot-5.0.3/src/syscfg.h:
+
+../config.h:
+
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/7.3.0/include/stdbool.h:
