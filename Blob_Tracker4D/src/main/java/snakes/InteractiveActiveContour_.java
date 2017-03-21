@@ -783,12 +783,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 				othercurrentimg = extractotherImage(otherCurrentView);
 
 				newimg = copytoByteImage(currentimg);
-				final List<RealPoint> targetCoords = new ArrayList<RealPoint>(finalRois.size());
-				final List<FlagNode<Roi>> targetNodes = new ArrayList<FlagNode<Roi>>(finalRois.size());
+				final List<FlagNode<ComSnake>> targetNodes = new ArrayList<FlagNode<ComSnake>>();
+				final List<RealPoint> targetCoords = new ArrayList<RealPoint>();
 		
-				Iterator<ComSnake> baseobjectiterator = finalRois.iterator();
 				
 				
+				 ArrayList<Roi> Roiscopy = new ArrayList<Roi>(Rois.size());
 				
 				
 				
@@ -800,12 +800,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 					newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity,
 							darktobright);
 					Rois = getcurrentRois(newtree);
-
+                    Roiscopy = getcurrentRois(newtree);
 					
 					for (int index = 0; index < Rois.size(); ++index) {
 						
-						
-						targetNodes.add(new FlagNode<Roi>(Rois.get(index)));
+						double[] center = getCenter(Rois.get(index));
+						targetCoords.add(new RealPoint(center));
 						Roi or = Rois.get(index);
 						
 					
@@ -839,10 +839,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 					peaks = newdog.getSubpixelPeaks();
 
 					Rois = getcurrentRois(peaks);
-
+					 Roiscopy = getcurrentRois(peaks);
 					for (int index = 0; index < Rois.size(); ++index) {
 						
-						targetNodes.add(new FlagNode<Roi>(Rois.get(index)));
+						double[] center = getCenter(Rois.get(index));
+						targetCoords.add(new RealPoint(center));
 						Roi or = Rois.get(index);
 
 						or.setStrokeColor(Color.red);
@@ -859,7 +860,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 					
 				
 					
-					targetCoords.add(new RealPoint(finalRois.get(index).com));
+					targetNodes.add(new FlagNode<ComSnake>(finalRois.get(index)));
 					
 					
 					
@@ -867,26 +868,39 @@ public class InteractiveActiveContour_ implements PlugIn {
 					
 				}
 		      
+		     
 		      Rois.clear();
-		      final KDTree<FlagNode<Roi>> Tree = new KDTree<FlagNode<Roi>>(targetNodes, targetCoords);
-		      final NNFlagsearchKDtree<Roi> Search = new NNFlagsearchKDtree<Roi>(Tree);
+		      Iterator<ComSnake> baseobjectiterator = finalRois.iterator();
+		      
+		      if (targetNodes.size() > 0 && targetCoords.size() > 0) {
+		    
+		      final KDTree<FlagNode<ComSnake>> Tree = new KDTree<FlagNode<ComSnake>>(targetNodes, targetCoords);
+		      final NNFlagsearchKDtree<ComSnake> Search = new NNFlagsearchKDtree<ComSnake>(Tree);
 		      
 		      while (baseobjectiterator.hasNext()) {
-
-					final ComSnake source = baseobjectiterator.next();
+		    	  final ComSnake source = baseobjectiterator.next();
 					final RealPoint sourceCoords = new RealPoint(source.com);
 					Search.search(sourceCoords);
 					final double squareDist = Search.getSquareDistance();
-		            final FlagNode<Roi> targetNode = Search.getSampler().get();
-		           
+		            final FlagNode<ComSnake> targetNode = Search.getSampler().get();
+		           System.out.println(squareDist);
+		            double[] center = new double[]{sourceCoords.getDoublePosition(0), sourceCoords.getDoublePosition(1)};
 		            
-		            Rois.add(source.rois);
+		           
+		            if (squareDist > 20)
+						continue;
 		            
 		            targetNode.setVisited(true);
+		            
+		            
+                   targetNode.getValue().rois.setLocation(center[0], center[1]);
+		            
+		            
+		            Rois.add(targetNode.getValue().rois);
 		     
 		      }
 		      
-		     
+		      }
 		     
 		     
 				
@@ -4283,6 +4297,24 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			}
 		}
+	}
+	
+	public double[] getCenter(Roi roi){
+
+		double[] center = new double[ 3 ];
+		
+
+		
+		center[0] = roi.getBounds().getCenterX();
+		center[1] = roi.getBounds().getCenterY();
+		center[2] = 0;
+		
+	
+		
+		return center;
+		
+		
+		
 	}
 
 	public static void main (String args[]) {

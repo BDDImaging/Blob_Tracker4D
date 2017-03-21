@@ -529,6 +529,44 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 
 	}
 
+	
+	public double[] getCenter(Roi roi){
+
+		double Intensity = 0;
+		double[] center = new double[ 3 ];
+		Cursor<FloatType> currentcursor = Views.iterable(source).localizingCursor();
+		double SumX = 0;
+		double SumY = 0;
+		final double[] position = new double[source.numDimensions()];
+
+		while (currentcursor.hasNext()) {
+
+			currentcursor.fwd();
+
+			currentcursor.localize(position);
+
+			int x = (int) position[0];
+			int y = (int) position[1];
+
+			if (roi.contains(x, y)) {
+				SumX += currentcursor.getDoublePosition(0) * currentcursor.get().getRealDouble();
+				SumY += currentcursor.getDoublePosition(1) * currentcursor.get().getRealDouble();
+				Intensity += currentcursor.get().getRealDouble();
+
+			}
+
+		}
+		center[ 0 ] = SumX / Intensity;
+		center[ 1 ] = SumY / Intensity;
+		
+		center[ 2 ] = 1;
+		
+		return center;
+		
+		
+		
+	}
+	
 	public double[] getProps(Roi roi) {
 
 		// 3 co-ordinates for COM 1 for TotalIntensity, 1 for Number of pixels, I for Mean Intensity, 1 for Circularity = 7, Same for target image : , 8 TotalIntensitytarget, 
