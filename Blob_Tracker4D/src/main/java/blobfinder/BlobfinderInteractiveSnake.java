@@ -284,7 +284,6 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 				finalrois.add(RoisResult[i]);
 				
 				
-				
 				ComSnake csnake = new ComSnake(thirdDimension, fourthDimension, center, RoisResult[i]);
 				comrois.add(csnake);
 				
@@ -559,7 +558,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		center[ 0 ] = SumX / Intensity;
 		center[ 1 ] = SumY / Intensity;
 		
-		center[ 2 ] = 1;
+		center[ 2 ] = 0;
 		
 		return center;
 		
@@ -614,7 +613,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		center[ 0 ] = SumX / Intensity;
 		center[ 1 ] = SumY / Intensity;
 		
-		center[ 2 ] = 1;
+		center[ 2 ] = 0;
 		
 		int width = (int)roi.getBounds().getWidth();
 		int height = (int)roi.getBounds().getHeight();

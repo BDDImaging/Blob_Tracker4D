@@ -283,6 +283,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	private ArrayList<SnakeObject> ProbBlobs;
 	ArrayList<ComSnake> finalRois;
 	ArrayList<Roi> Rois;
+	ArrayList<Roi> NearestNeighbourRois;
 	ArrayList<Roi> BiggerRois;
 	public static enum ValueChange {
 		SIGMA, THRESHOLD, ROI, MINMAX, ALL, THIRDDIM, FOURTHDIM, maxSearch, iniSearch, missedframes, MINDIVERSITY, DELTA, MINSIZE, 
@@ -527,6 +528,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		All3DSnakes = new ArrayList<ArrayList<SnakeObject>>();
 		Rois = new ArrayList<Roi>();
+		NearestNeighbourRois = new ArrayList<Roi>();
 		SnakeRoisA = new ArrayList<Roi>();
 		SnakeRoisB = new ArrayList<Roi>();
 		impcopy = imp.duplicate();
@@ -783,12 +785,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 				othercurrentimg = extractotherImage(otherCurrentView);
 
 				newimg = copytoByteImage(currentimg);
-				final List<FlagNode<ComSnake>> targetNodes = new ArrayList<FlagNode<ComSnake>>();
-				final List<RealPoint> targetCoords = new ArrayList<RealPoint>();
+				
+				final List<FlagNode<Roi>> targetNodes = new ArrayList<FlagNode<Roi>>(finalRois.size());
+				final List<RealPoint> targetCoords = new ArrayList<RealPoint>(finalRois.size());
 		
 				
 				
-				 ArrayList<Roi> Roiscopy = new ArrayList<Roi>(Rois.size());
 				
 				
 				
@@ -800,12 +802,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 					newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity,
 							darktobright);
 					Rois = getcurrentRois(newtree);
-                    Roiscopy = getcurrentRois(newtree);
 					
 					for (int index = 0; index < Rois.size(); ++index) {
 						
 						double[] center = getCenter(Rois.get(index));
 						targetCoords.add(new RealPoint(center));
+						targetNodes.add(new FlagNode<Roi>(Rois.get(index)));
 						Roi or = Rois.get(index);
 						
 					
@@ -839,11 +841,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 					peaks = newdog.getSubpixelPeaks();
 
 					Rois = getcurrentRois(peaks);
-					 Roiscopy = getcurrentRois(peaks);
 					for (int index = 0; index < Rois.size(); ++index) {
 						
 						double[] center = getCenter(Rois.get(index));
 						targetCoords.add(new RealPoint(center));
+						targetNodes.add(new FlagNode<Roi>(Rois.get(index)));
 						Roi or = Rois.get(index);
 
 						or.setStrokeColor(Color.red);
@@ -854,55 +856,58 @@ public class InteractiveActiveContour_ implements PlugIn {
 				}
 				
 				
-		      for (int index = 0; index < finalRois.size(); ++index) {
-
-					
-					
-				
-					
-					targetNodes.add(new FlagNode<ComSnake>(finalRois.get(index)));
-					
-					
-					
-					
-					
-				}
 		      
 		     
-		      Rois.clear();
-		      Iterator<ComSnake> baseobjectiterator = finalRois.iterator();
-		      
-		      if (targetNodes.size() > 0 && targetCoords.size() > 0) {
+		     
 		    
-		      final KDTree<FlagNode<ComSnake>> Tree = new KDTree<FlagNode<ComSnake>>(targetNodes, targetCoords);
-		      final NNFlagsearchKDtree<ComSnake> Search = new NNFlagsearchKDtree<ComSnake>(Tree);
+		      if (targetNodes.size() > 0 && targetCoords.size() > 0) {
+		    	NearestNeighbourRois.clear();
+		      final KDTree<FlagNode<Roi>> Tree = new KDTree<FlagNode<Roi>>(targetNodes, targetCoords);
+		      final NNFlagsearchKDtree<Roi> Search = new NNFlagsearchKDtree<Roi>(Tree);
 		      
-		      while (baseobjectiterator.hasNext()) {
-		    	  final ComSnake source = baseobjectiterator.next();
-					final RealPoint sourceCoords = new RealPoint(source.com);
+		     for (int index = 0 ; index < finalRois.size(); ++index) {
+		    	 
+
+						
+						
+						int width = (int)finalRois.get(index).rois.getBounds().getWidth();
+						int height = (int)finalRois.get(index).rois.getBounds().getHeight();
+						
+						final OvalRoi or = new OvalRoi(Util.round(finalRois.get(index).com[0] -(width - 2)/2), Util.round(finalRois.get(index).com[1] - (height -2)/2 ), Util.round(width - 2),
+								Util.round(height - 2));
+						
+		    	 
+		    	 
+					final RealPoint sourceCoords = new RealPoint(getCenter(or));
+				
 					Search.search(sourceCoords);
 					final double squareDist = Search.getSquareDistance();
-		            final FlagNode<ComSnake> targetNode = Search.getSampler().get();
-		           System.out.println(squareDist);
-		            double[] center = new double[]{sourceCoords.getDoublePosition(0), sourceCoords.getDoublePosition(1)};
+		            final FlagNode<Roi> targetNode = Search.getSampler().get();
+		            double[] center = getCenter(targetNode.getValue());
+		          
 		            
-		           
-		            if (squareDist > 20)
-						continue;
 		            
 		            targetNode.setVisited(true);
 		            
-		            
-                   targetNode.getValue().rois.setLocation(center[0], center[1]);
-		            
-		            
-		            Rois.add(targetNode.getValue().rois);
+						
+		            	
+		            	or.setLocation(center[0], center[1]);
+		                   
+		            	
+		                   
+		           NearestNeighbourRois.add(or);
+		         
 		     
 		      }
 		      
 		      }
-		     
-		     
+		      finalRois.clear();
+		      targetCoords.clear();
+              targetNodes.clear();
+              
+              
+              
+		   
 				
 
 
@@ -1383,8 +1388,13 @@ public class InteractiveActiveContour_ implements PlugIn {
 					imp.getCanvas().addMouseListener(roiListener);
 
 				
-
-					BlobfinderInteractiveSnake snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView,
+					BlobfinderInteractiveSnake snake; 
+					if (NearestNeighbourRois.size() > 0)
+					snake	= new BlobfinderInteractiveSnake(CurrentView, otherCurrentView,
+								NearestNeighbourRois, sizeX, sizeY, usefolder, addTrackToName, z, indexx, TrackinT);
+					else
+						
+					 snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView,
 							Rois, sizeX, sizeY, usefolder, addTrackToName, z, indexx, TrackinT);
 
 					RoiManager manager = RoiManager.getInstance();
@@ -1494,16 +1504,25 @@ public class InteractiveActiveContour_ implements PlugIn {
 				CurrentView = getCurrentView();
 				otherCurrentView = getotherCurrentView();
 				
-			
-				BlobfinderInteractiveSnake snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY,usefolder, addTrackToName,
-						z, 0, TrackinT);
+				updatePreview(ValueChange.THIRDDIMTrack);
+				
+				
+				BlobfinderInteractiveSnake snake; 
+				if (NearestNeighbourRois.size() > 0)
+				snake	= new BlobfinderInteractiveSnake(CurrentView, otherCurrentView,
+							NearestNeighbourRois, sizeX, sizeY, usefolder, addTrackToName, z, 0 , TrackinT);
+				else
+					
+				 snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView,
+						Rois, sizeX, sizeY, usefolder, addTrackToName, z, 0, TrackinT);
+
 
 				if (Auto && z > next)
 					snake.Auto = true;
 				
 				
 				
-				updatePreview(ValueChange.THIRDDIMTrack);
+				
 				
 				snake.process();
 				usefolder = snake.getFolder();
@@ -1582,10 +1601,16 @@ public class InteractiveActiveContour_ implements PlugIn {
 			CurrentView = getCurrentView();
 			otherCurrentView = getotherCurrentView();
 			updatePreview(ValueChange.THIRDDIMTrack);
-			
+			BlobfinderInteractiveSnake snake; 
+			if (NearestNeighbourRois.size() > 0)
+			snake	= new BlobfinderInteractiveSnake(CurrentView, otherCurrentView,
+						NearestNeighbourRois, sizeX, sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider , TrackinT);
+			else
+				
+			 snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView,
+					Rois, sizeX, sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT);
 
-			BlobfinderInteractiveSnake snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY,usefolder, addTrackToName,
-					thirdDimensionslider, fourthDimensionslider, TrackinT);
+			
 
 			snake.process();
 			usefolder = snake.getFolder();
@@ -1657,8 +1682,16 @@ public class InteractiveActiveContour_ implements PlugIn {
 			otherCurrentView = getotherCurrentView();
 			updatePreview(ValueChange.THIRDDIM);
 
-			BlobfinderInteractiveSnake snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY,usefolder, addTrackToName,
-					thirdDimensionslider, fourthDimensionslider, TrackinT);
+			
+			
+			BlobfinderInteractiveSnake snake;
+			if (NearestNeighbourRois.size() > 0)
+				snake	= new BlobfinderInteractiveSnake(CurrentView, otherCurrentView,
+							NearestNeighbourRois, sizeX, sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider , TrackinT);
+				else
+					
+				 snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView,
+						Rois, sizeX, sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT);
 
 			snake.process();
 			usefolder = snake.getFolder();
@@ -4304,9 +4337,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 		double[] center = new double[ 3 ];
 		
 
+
 		
-		center[0] = roi.getBounds().getCenterX();
-		center[1] = roi.getBounds().getCenterY();
+		center[0] = roi.getXBase();
+		center[1] = roi.getYBase();
 		center[2] = 0;
 		
 	
