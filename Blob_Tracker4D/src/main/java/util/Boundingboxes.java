@@ -410,8 +410,7 @@ public static FinalInterval CurrentroiInterval(RandomAccessibleInterval<FloatTyp
 
 		// Go through the whole image and add every pixel, that belongs to
 		// the currently processed label
-		long[] minVal = { originalimg.max(0), originalimg.max(1) };
-		long[] maxVal = { originalimg.min(0), originalimg.min(1) };
+		
 		while (intCursor.hasNext()) {
 			intCursor.fwd();
 			inputRA.setPosition(intCursor);
@@ -419,24 +418,15 @@ public static FinalInterval CurrentroiInterval(RandomAccessibleInterval<FloatTyp
 			int i = intCursor.get().get();
 			if (i == currentLabel) {
 				intCursor.localize(position);
-				for (int d = 0; d < n; ++d) {
-					if (position[d] < minVal[d]) {
-						minVal[d] = position[d];
-					}
-					if (position[d] > maxVal[d]) {
-						maxVal[d] = position[d];
-					}
-
-				}
+				
 				imageRA.get().set(inputRA.get());
 
 			}
 
 		}
-		FinalInterval intervalsmall = new FinalInterval(minVal, maxVal) ;
-		RandomAccessibleInterval<FloatType> outimgsmall = Views.interval(outimg, intervalsmall);
+	
 
-		return outimgsmall;
+		return outimg;
 
 	}
 	
@@ -444,14 +434,12 @@ public static FinalInterval CurrentroiInterval(RandomAccessibleInterval<FloatTyp
 			RandomAccessibleInterval<FloatType> originalimg, int currentLabel) {
 		int n = originalimg.numDimensions();
 		RandomAccess<FloatType> inputRA = originalimg.randomAccess();
-		long[] position = new long[n];
 		Cursor<IntType> intCursor = Views.iterable(Intimg).cursor();
 		final FloatType type = originalimg.randomAccess().get().createVariable();
 		final ImgFactory<FloatType> factory = Util.getArrayOrCellImgFactory(originalimg, type);
 		RandomAccessibleInterval<FloatType> outimg = factory.create(originalimg, type);
 		RandomAccess<FloatType> imageRA = outimg.randomAccess();
-		long[] minVal = { originalimg.max(0), originalimg.max(1) };
-		long[] maxVal = { originalimg.min(0), originalimg.min(1) };
+	
 		// Go through the whole image and add every pixel, that belongs to
 		// the currently processed label
 
@@ -461,24 +449,15 @@ public static FinalInterval CurrentroiInterval(RandomAccessibleInterval<FloatTyp
 			imageRA.setPosition(inputRA);
 			int i = intCursor.get().get();
 			if (i == currentLabel) {
-				for (int d = 0; d < n; ++d) {
-					if (position[d] < minVal[d]) {
-						minVal[d] = position[d];
-					}
-					if (position[d] > maxVal[d]) {
-						maxVal[d] = position[d];
-					}
-
-				}
+				
 				imageRA.get().set(inputRA.get());
 
 			}
 
 		}
-		FinalInterval intervalsmall = new FinalInterval(minVal, maxVal) ;
-		RandomAccessibleInterval<FloatType> outimgsmall = Views.offsetInterval(outimg, intervalsmall);
+		
 
-		return outimgsmall;
+		return outimg;
 
 	}
 	
