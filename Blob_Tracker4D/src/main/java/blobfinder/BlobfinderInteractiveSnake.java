@@ -70,7 +70,10 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	RandomAccessibleInterval<FloatType> resultsource;
 
 	ArrayList<ABSnakeFast>  snakelist;
-    
+	
+	ArrayList<ABSnakeFast>  measuresnakelist;
+	
+	
 	RandomAccessibleInterval<FloatType> currentimg;
 	ImageStack pile_seg = null;
 	final boolean TrackinT;
@@ -201,6 +204,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		AdvancedParameters();
 
 		snakelist = new ArrayList<ABSnakeFast>();
+		measuresnakelist = new ArrayList<ABSnakeFast>();
 		// original stack
 
 		ProbBlobs = new ArrayList<SnakeObject>();
