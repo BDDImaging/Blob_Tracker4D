@@ -1,11 +1,33 @@
 package blobfinder;
 
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Label;
 import java.awt.Rectangle;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+
+import org.apache.poi.ss.formula.WorkbookEvaluator;
 
 import graphconstructs.Logger;
 import ij.IJ;
@@ -22,6 +44,7 @@ import ij.io.RoiEncoder;
 import ij.plugin.frame.RoiManager;
 import ij.process.ColorProcessor;
 import ij.process.ImageProcessor;
+import mpicbg.spim.io.IOFunctions;
 import mserMethods.GetDelta;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
@@ -53,7 +76,12 @@ import snakes.SnakeObject;
 
 public class BlobfinderInteractiveSnake implements Blobfinder {
 
-	
+	  JLabel label = new JLabel("Progress.." + percent);
+      JProgressBar jpb = new JProgressBar();
+      int max = Progressmax;
+      JFrame frame = new JFrame();
+      JPanel panel = new JPanel();
+      
 	private static final String BASE_ERROR_MSG = "[Blobfinder] ";
 	protected Logger logger = Logger.DEFAULT_LOGGER;
 	protected String errorMessage;
@@ -72,12 +100,13 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	ArrayList<ABSnakeFast>  snakelist;
 	
 	ArrayList<ABSnakeFast>  measuresnakelist;
-	
-	
+	Roi roi;
+	ABSnakeFast snake;	
 	RandomAccessibleInterval<FloatType> currentimg;
 	ImageStack pile_seg = null;
 	final boolean TrackinT;
-
+	Interval interval;
+	Interval spaceinterval;
 	int currentthirdDimension = -1;
 	// Dimensions of the stck :
 	int thirdDimensionsize = 0;
@@ -96,9 +125,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	private final double sizeX;
 	private final double sizeY;
 	private int Roiindex;
-	
-	
-
+	static double percent = 0;
 
 	/**
 	 * Parametres of Snake :
@@ -141,11 +168,15 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	boolean useroinames = false;
 	boolean nosi1elessrois = true;
 	boolean differentfolder = false;
-	
+	static int Progressmin = 0;
+	static int Progressmax = 100;
+	ArrayList<Roi> RoisOrig;
+	Roi[] RoisCurrent = new Roi[nbRois];
+	Roi[] RoisResult = new Roi[nbRois];
 	RoiEncoder saveRoi;
 	String usefolder ;
 	String addToName;
-   
+	private final ConcurrentHashMap< String, Double > features = new ConcurrentHashMap< String, Double >();
 	public BlobfinderInteractiveSnake(final RandomAccessibleInterval<FloatType> source,
 			final RandomAccessibleInterval<FloatType> target, ArrayList<Roi> rois,
 			final double sizeX, final double sizeY, final String usefolder, final String addToName,
@@ -162,7 +193,20 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		this.usefolder = usefolder;
 		this.addToName = addToName;
 		ndims = source.numDimensions();
+	
+		
+		
+		
 	}
+	
+	
+	
+	
+
+
+	
+	
+	
 	
 	
 	@Override
@@ -185,7 +229,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		
 		return addToName;
 	}
-
+  
 	
 	@Override
 	public boolean checkInput() {
@@ -196,10 +240,21 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		}
 		return true;
 	}
+	
+	
+	
 
 	@Override
 	public boolean process() {
 		
+		
+		
+		
+		
+		
+	//	ProgressBar newbar = new ProgressBar();
+	//	newbar.setVisible(true);
+	//	newbar.setStringPainted(true);
 		configDriver = new SnakeConfigDriver();
 		AdvancedParameters();
 
@@ -212,7 +267,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		finalrois = new ArrayList<Roi>();
 		
 		comrois = new ArrayList<ComSnake>();
-
+		
 		boolean dialog;
 		boolean dialogAdvanced;
 		if (Auto)
@@ -220,16 +275,28 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		else
 			dialog = Dialogue();
 		// many rois
-		
-		nbRois = rois.size();
-		IJ.log("processing " + nbRois + "rois");
-		System.out.println("processing " + nbRois + "rois");
-		ArrayList<Roi> RoisOrig = rois;
-		Roi[] RoisCurrent = new Roi[nbRois];
-		Roi[] RoisResult = new Roi[nbRois];
-
 		if (advanced)
 			dialogAdvanced = AdvancedDialog();
+		
+		SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+            go();
+            
+            }
+        });
+		
+	
+
+		nbRois = rois.size();
+		
+		IJ.log("processing " + nbRois + "rois");
+		System.out.println("processing " + nbRois + "rois");
+		
+
+		
+		
+		
 
 		regmin = reg / 2.0;
 		regmax = reg;
@@ -239,81 +306,26 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		resultsource = factory.create(source, type);
 
 		
+		
+	        
+      
 
 
-		Roi roi;
+		
 
 		currentimg = source;
 
 		// Expand the image by 10 pixels
 		
-		Interval spaceinterval = Intervals.createMinMax(new long[] {currentimg.min(0),currentimg.min(1), currentimg.max(0), currentimg.max(1)});
-		Interval interval = Intervals.expand(spaceinterval, 10);
+		 spaceinterval = Intervals.createMinMax(new long[] {currentimg.min(0),currentimg.min(1), currentimg.max(0), currentimg.max(1)});
+		 interval = Intervals.expand(spaceinterval, 10);
 		currentimg = Views.interval(Views.extendBorder(currentimg), interval);
 		
 	
-		ABSnakeFast snake;
 		
-
-		for (int i = 0; i < RoisOrig.size(); i++) {
-
-			
-				roi = RoisOrig.get(i);
-			
-			IJ.log("processing fourthDimension no. " + fourthDimension + " thirdDimension no. " +  thirdDimension  +  " with roi " + i);
-			System.out.println("processing fourthDimension no. " + fourthDimension + " thirdDimension no. " +  thirdDimension  +  " with roi " + i);
-
-			snake = processSnake(roi, i + 1);
-			snake.killImages();
-
-			//snake.DrawSnake(overlay, source, colorDraw, 1);
-			RoisResult[i] = snake.createRoi();
-			RoisResult[i].setName("res-" + i);
-			RoisCurrent[i] = snake.createRoi();
-
-			snakelist.add(snake);
-			
-			if (RoisResult[i] != null) {
-			
-				final double[] props = getProps(RoisResult[i]);
-				final double[] center = new double[]{props[0], props[1], props[2]};
-				final double Intensitysource = props[3];
-				final int Numberofpixels = (int)props[4];
-				final double MeanIntensitysource = props[5];
-				final double Circularity = props[6];
-				final double Intensitytarget = props[7];
-				final int NumberofpixelsTarget = (int)props[8];
-				final double MeanIntensitytarget = props[9];
-				final double Size = props[10];
-				finalrois.add(RoisResult[i]);
-				
-				
-				ComSnake csnake = new ComSnake(thirdDimension, fourthDimension, center, RoisResult[i]);
-				comrois.add(csnake);
-				
-				SnakeObject currentsnake = new SnakeObject(thirdDimension, fourthDimension, i, RoisResult[i], center, Intensitysource,
-						 Numberofpixels, MeanIntensitysource, Intensitytarget, NumberofpixelsTarget, MeanIntensitytarget, Circularity, Size);
-				ProbBlobs.add(currentsnake);
-				
-				
-			}
-			
-			if (saverois){
-				
-				  try {
-                      saveRoi = new RoiEncoder(usefolder + "//" + "SnakeRoi" + (i) + "thirdDim" + thirdDimension + "dourthDim" + fourthDimension + ".roi");
-                      saveRoi.write(RoisResult[i]);
-                  } catch (IOException ex) {
-
-                  }
-				
-			}
 		
-			
-			
-		}
 		
-	    
+		
 		
 		
 		
@@ -328,6 +340,10 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	}
 	
 	private boolean Dialogue() {
+		
+		
+		
+		
 		// array of colors
 		String[] colors = { "Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "Black", "White" };
 		int indexcol = 0;
@@ -692,6 +708,26 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	}
 	
 	
+	/** The name of the frame feature. */
+	public static final String SNAKEPROGRESS= "SNAKEPROGRESS";
+	
+	public final Double getFeature( final String feature )
+	{
+		return features.get( feature );
+	}
+	/**
+	 * Stores the specified feature value for this spot.
+	 *
+	 * @param feature
+	 *            the name of the feature to store, as a {@link String}.
+	 * @param value
+	 *            the value to store, as a {@link Double}. Using
+	 *            <code>null</code> will have unpredicted outcomes.
+	 */
+	public final void putFeature( final String feature, final Double value )
+	{
+		features.put( feature, value );
+	}
 	
 	
 	
@@ -708,5 +744,268 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		}
 		return (distance);
 	}
+	
+	
+
+	public  void go() {
+      
+       
+        jpb.setIndeterminate(true);
+      
+        jpb.setMaximum(max);
+        panel.add(label);
+        panel.add(jpb);
+        frame.add(panel);
+        frame.pack();
+        frame.setSize(200,90);
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+       
+        new Task_Update(jpb, max, label).execute();
+      
+      //  new Task_IntegerUpdate(jpb, max, label).execute();
+	}
+        
+	
+	/*
+	static class Task_IntegerUpdate extends SwingWorker<Void, Integer> {
+
+            JProgressBar jpb;
+            int max;
+            JLabel label;
+            public Task_IntegerUpdate(JProgressBar jpb, int max, JLabel label) {
+                this.jpb = jpb;
+                this.max = max;
+                this.label = label;
+            }
+            @Override
+            protected void process(List<Integer> chunks) {
+           
+            	 int i = chunks.get(chunks.size()-1);
+                 jpb.setValue(i); // The last value in this array is all we care about.
+                 System.out.println(i);
+                 label.setText("Progress %" + i + " of " + max);
+            	
+                }
+
+            @Override
+            protected Void doInBackground() throws Exception {
+               
+            	while (percent < Progressmax && percent > 0 ){
+                    Thread.sleep(10); // Illustrating long-running code.
+                    publish((int) percent );
+            	}
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    get();
+                    label.setText("Progress %" + percent + " of " + max);
+                    //JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } catch (ExecutionException | InterruptedException e) {
+                    e.printStackTrace();
+                }
+            
+        }
+            
+            
+            
+            
+    }
+
+        */
+
+       class Task_Update extends SwingWorker<Boolean, Integer>{
+
+        	  JProgressBar jpb;
+              int max;
+              JLabel label;
+        	public Task_Update(JProgressBar jpb, int max, JLabel label){
+        		 this.jpb = jpb;
+                 this.max = max;
+                 this.label = label;
+        		
+        		
+        	}
+        	
+        	 protected Boolean doInBackground() throws Exception {
+        		 
+        		 
+        			
+        			
+        			RoisOrig = rois;
+        		 
+        		 
+        		 
+         	    // Simulate doing something useful.
+        			for (int i = 0; i < RoisOrig.size(); i++) {
+        				
+        				
+        				
+        				
+        				
+                     Thread.sleep(10); // Illustrating long-running code.
+                     publish((int) percent );
+
+     				roi = RoisOrig.get(i);
+     			
+     			IJ.log("processing fourthDimension no. " + fourthDimension + " thirdDimension no. " +  thirdDimension  +  " with roi " + i);
+     			System.out.println("processing fourthDimension no. " + fourthDimension + " thirdDimension no. " +  thirdDimension  +  " with roi " + i);
+
+     			
+     			snake = processSnake(roi, i + 1);
+     			snake.killImages();
+
+     			//snake.DrawSnake(overlay, source, colorDraw, 1);
+     			RoisResult[i] = snake.createRoi();
+     			RoisResult[i].setName("res-" + i);
+     			RoisCurrent[i] = snake.createRoi();
+
+     			snakelist.add(snake);
+     			
+     			if (RoisResult[i] != null) {
+     			
+     				final double[] props = getProps(RoisResult[i]);
+     				final double[] center = new double[]{props[0], props[1], props[2]};
+     				final double Intensitysource = props[3];
+     				final int Numberofpixels = (int)props[4];
+     				final double MeanIntensitysource = props[5];
+     				final double Circularity = props[6];
+     				final double Intensitytarget = props[7];
+     				final int NumberofpixelsTarget = (int)props[8];
+     				final double MeanIntensitytarget = props[9];
+     				final double Size = props[10];
+     				finalrois.add(RoisResult[i]);
+     				
+     				
+     				ComSnake csnake = new ComSnake(thirdDimension, fourthDimension, center, RoisResult[i]);
+     				comrois.add(csnake);
+     				
+     				SnakeObject currentsnake = new SnakeObject(thirdDimension, fourthDimension, i, RoisResult[i], center, Intensitysource,
+     						 Numberofpixels, MeanIntensitysource, Intensitytarget, NumberofpixelsTarget, MeanIntensitytarget, Circularity, Size);
+     				ProbBlobs.add(currentsnake);
+     				putFeature( SNAKEPROGRESS, Double.valueOf( ProbBlobs.size() ) );
+     				
+     				percent = ( Math.round(100*(i + 1)/ (nbRois) ));
+     				
+
+     				
+     				
+     				
+
+     				
+
+     			}
+     			
+     			if (saverois){
+    				
+    				  try {
+                          saveRoi = new RoiEncoder(usefolder + "//" + "SnakeRoi" + (i) + "thirdDim" + thirdDimension + "dourthDim" + fourthDimension + ".roi");
+                          saveRoi.write(RoisResult[i]);
+                      } catch (IOException ex) {
+
+                      }
+    				
+    			}
+         	     
+         	    }
+        			
+
+         	  
+         	    return true;
+         	   }
+
+         	   // Can safely update the GUI from this method.
+         	   protected void done() {
+         	    
+         	    boolean status;
+         	    try {
+         	    	 get();
+                     label.setText("Progress" + percent + " % of " + max);
+                   //  JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
+                     frame.dispose();
+                     worker.isDone();
+                 } catch (ExecutionException | InterruptedException e) {
+                     e.printStackTrace();
+                 }
+         	   }
+
+         	   @Override
+         	   // Can safely update the GUI from this method.
+         	   protected void process(List<Integer> chunks) {
+         		  int i = chunks.get(chunks.size()-1);
+                  jpb.setValue(i); // The last value in this array is all we care about.
+                  label.setText("Progress " + i + " % of " + max);
+         	   }
+         	   
+         	   
+         	  };
+        	
+        	
+        	
+        	
+        
+        
+        
+        SwingWorker<Boolean, Integer> worker = new SwingWorker<Boolean, Integer>() {
+        	
+        	
+             
+
+        	
+        	
+        	   @Override
+        	   protected Boolean doInBackground() throws Exception {
+        	    // Simulate doing something useful.
+        		   while (percent < Progressmax && percent > 0 ){
+                       Thread.sleep(10); // Illustrating long-running code.
+                       publish((int) percent );
+        	     
+        	     // The type we pass to publish() is determined
+        	     // by the second template parameter.
+        	     
+        	    }
+
+        	    // Here we can return some object of whatever type
+        	    // we specified for the first template parameter.
+        	    // (in this case we're auto-boxing 'true').
+        	    return true;
+        	   }
+
+        	   // Can safely update the GUI from this method.
+        	   protected void done() {
+        	    
+        	    boolean status;
+        	    try {
+        	     // Retrieve the return value of doInBackground.
+        	     status = get();
+        	     JLabel statusLabel = new JLabel();
+        	     statusLabel.setText("Completed with status: " + status);
+        	    
+        	     
+        	    } catch (InterruptedException e) {
+        	     // This is thrown if the thread's interrupted.
+        	    } catch (ExecutionException e) {
+        	  
+        	    }
+        	   }
+
+        	   @Override
+        	   // Can safely update the GUI from this method.
+        	   protected void process(List<Integer> chunks) {
+        	  
+        	    int mostRecentValue = chunks.get(chunks.size()-1);
+        	    JLabel countLabel1 = new JLabel();
+        	    countLabel1.setText(Integer.toString(mostRecentValue));
+        	   }
+        	   
+        	   
+        	  };
+        	  
+        	 
+        
+
 }
 

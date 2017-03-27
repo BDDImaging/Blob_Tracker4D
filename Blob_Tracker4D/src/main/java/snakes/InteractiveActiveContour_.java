@@ -6,6 +6,7 @@ import java.awt.CardLayout;
 import java.awt.Checkbox;
 import java.awt.CheckboxGroup;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
@@ -24,6 +25,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -38,6 +41,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -45,6 +49,10 @@ import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Row;
@@ -78,6 +86,7 @@ import ij.gui.GenericDialog;
 import ij.gui.OvalRoi;
 import ij.gui.Overlay;
 import ij.gui.PolygonRoi;
+import ij.gui.ProgressBar;
 import ij.gui.Roi;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
@@ -129,9 +138,10 @@ import util.Boundingboxes;
  */
 
 public class InteractiveActiveContour_ implements PlugIn {
-
+	
 	final int scrollbarSize = 1000;
-
+	/** Store the individual features, and their values. */
+	private final ConcurrentHashMap< String, Double > features = new ConcurrentHashMap< String, Double >();
 	float sigma = 0.5f;
 	float sigma2 = 0.5f;
 	float threshold = 1f;
@@ -178,6 +188,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 	float sizeY = 0;
 	public int radius = 1;
 	public float maxVar = 1;
+	int Progressmin = 0;
+	int Progressmax = 100;
 	public float minDiversity = 1;
 	public float thresholdHough = 1;
 	FloatType minval = new FloatType(0);
@@ -202,7 +214,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	RandomAccessibleInterval<FloatType> originalimgB;
 	ImageStack snakestack;
 	ImageStack measuresnakestack;
-
+	
 	ArrayList<double[]> AllmeanCovar;
 	float deltaMax = 400f;
 	float maxVarMin = 0;
@@ -291,6 +303,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	private ArrayList<SnakeObject> ProbBlobs;
 	boolean displayBitimg = false;
 	boolean displayWatershedimg = false;
+	boolean showProgress = false;
 	ArrayList<ComSnake> finalRois;
 	ArrayList<Roi> Rois;
 	ArrayList<Roi> NearestNeighbourRois;
@@ -299,7 +312,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public static enum ValueChange {
 		SIGMA, THRESHOLD, ROI, MINMAX, ALL, THIRDDIM, FOURTHDIM, maxSearch, iniSearch, missedframes, MINDIVERSITY, DELTA,
 		MINSIZE, MAXSIZE, MAXVAR, DARKTOBRIGHT, FindBlobsVia, SHOWMSER, SHOWDOG, NORMALIZE, MEDIAN, THIRDDIMTrack, FOURTHDIMTrack, 
-		SizeX, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG
+		SizeX, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, SHOWPROGRESS
 	}
 
 	boolean isFinished = false;
@@ -548,7 +561,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		imp = ImageJFunctions.show(CurrentView);
 		imp.setTitle("CurrentView of Tracking image");
 		
-
+		
 		All3DSnakes = new ArrayList<ArrayList<SnakeObject>>();
 		Rois = new ArrayList<Roi>();
 		NearestNeighbourRois = new ArrayList<Roi>();
@@ -588,11 +601,13 @@ public class InteractiveActiveContour_ implements PlugIn {
 	}
 
 	public void reset() {
+		
 		graphZ = new SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge>(DefaultWeightedEdge.class);
 		final Iterator<SnakeObject> it = AllSliceSnakes.get(0).iterator();
 		while (it.hasNext()) {
 			graphZ.addVertex(it.next());
 		}
+		
 	}
 
 	private boolean Dialogue() {
@@ -708,6 +723,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		overlay.clear();
 
+		
+		
+		
 		if (change == ValueChange.SHOWNEW) {
 
 			measureimp = ImageJFunctions.show(otherCurrentView);
@@ -747,7 +765,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		}
 
 		if (change == ValueChange.THIRDDIMTrack || change == ValueChange.FOURTHDIMTrack) {
-
+			
 			if (Rois!= null)
 			Rois.clear();
 			// imp = ImageJFunctions.wrapFloat(CurrentView, "current");
@@ -761,7 +779,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			newimg = copytoByteImage(currentimg);
 
-			final List<FlagNode<Roi>> targetNodes = new ArrayList<FlagNode<Roi>>(finalRois.size());
+			final List<FlagNode<double[]>> targetNodes = new ArrayList<FlagNode<double[]>>(finalRois.size());
 			final List<RealPoint> targetCoords = new ArrayList<RealPoint>(finalRois.size());
 
 			if (showMSER) {
@@ -771,12 +789,13 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 				Rois = getcurrentRois(newtree);
+                ArrayList<double[]> centerRoi = getRoiMean(newtree);
+                
+				for (int index = 0; index < centerRoi.size(); ++index) {
 
-				for (int index = 0; index < Rois.size(); ++index) {
-
-					double[] center = getCenter(Rois.get(index));
+					double[] center = new double[]{centerRoi.get(index)[0], centerRoi.get(index)[1]};
 					targetCoords.add(new RealPoint(center));
-					targetNodes.add(new FlagNode<Roi>(Rois.get(index)));
+					targetNodes.add(new FlagNode<double[]>(centerRoi.get(index)));
 					Roi or = Rois.get(index);
 
 					or.setStrokeColor(Color.red);
@@ -809,12 +828,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 				peaks = newdog.getSubpixelPeaks();
 
 				Rois = getcurrentRois(peaks);
-				for (int index = 0; index < Rois.size(); ++index) {
+				for (int index = 0; index < peaks.size(); ++index) {
 
-					double[] center = getCenter(Rois.get(index));
+					double[] center = new double[]{peaks.get(index).getDoublePosition(0), peaks.get(index).getDoublePosition(1)};
 					
 					targetCoords.add(new RealPoint(center));
-					targetNodes.add(new FlagNode<Roi>(Rois.get(index)));
+					targetNodes.add(new FlagNode<double[]>(center));
 					Roi or = Rois.get(index);
 
 					or.setStrokeColor(Color.red);
@@ -847,11 +866,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 	              Rois.addAll(currentroi); 
 					
 				}
-				
-				for (int index = 0; index < Rois.size(); ++index) {
-					double[] center = getCenter(Rois.get(index));
+				  ArrayList<double[]> centerRoi = getRoiMean(newtree);
+				for (int index = 0; index < centerRoi.size(); ++index) {
+
+					double[] center = new double[]{centerRoi.get(index)[0], centerRoi.get(index)[1]};
 					targetCoords.add(new RealPoint(center));
-					targetNodes.add(new FlagNode<Roi>(Rois.get(index)));
+					targetNodes.add(new FlagNode<double[]>(centerRoi.get(index)));
 					
 					Roi or = Rois.get(index);
 
@@ -859,6 +879,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 					overlay.add(or);
 					roimanager.addRoi(or);
 				}
+				
+				
+
+				
 			
 				
 			}
@@ -892,15 +916,17 @@ public class InteractiveActiveContour_ implements PlugIn {
 	              ArrayList<RefinedPeak<Point>> localpeaks = newdog.getSubpixelPeaks();
 	              ArrayList<Roi> currentroi = getcurrentRois(localpeaks);
 	              Rois.addAll(currentroi); 
+	              peaks.addAll(localpeaks);
 	              
 	              
 					
 				}
 
 				for (int index = 0; index < Rois.size(); ++index) {
-					double[] center = getCenter(Rois.get(index));
+                    double[] center = new double[]{peaks.get(index).getDoublePosition(0), peaks.get(index).getDoublePosition(1)};
+					
 					targetCoords.add(new RealPoint(center));
-					targetNodes.add(new FlagNode<Roi>(Rois.get(index)));
+					targetNodes.add(new FlagNode<double[]>(center));
 					Roi or = Rois.get(index);
 
 					or.setStrokeColor(Color.red);
@@ -1727,10 +1753,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 	protected class moveAllListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
-
+			
 			// add listener to the imageplus slice slider
 			sliceObserver = new SliceObserver(imp, new ImagePlusListener());
 
+			
+			All3DSnakes.clear();
 			Dialoguesec();
 			int next = thirdDimension;
 			int nextZ = fourthDimension;
@@ -1747,6 +1775,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 					measuresnakestack.deleteSlice(index);
 				}
 			}
+			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
 			// Run snakes over a frame for each slice in that frame
 			for (int indexx = next; indexx <= fourthDimensionSize; ++indexx) {
 				snakestack = new ImageStack((int) originalimgA.dimension(0), (int) originalimgA.dimension(1),
@@ -1797,7 +1826,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 							snake.Auto = true;
 					}
 					snake.checkInput();
+					 
 					snake.process();
+				        
+					 
 					usefolder = snake.getFolder();
 					addTrackToName = snake.getFile();
 
@@ -1866,10 +1898,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 					AllSliceSnakes.add(currentsnakes);
 					IJ.log(" " + AllSliceSnakes.size());
-
+				           
 				} // Z loop closing
 					// Make KD tree to link objects along Z axis
-
+					
 				ArrayList<SnakeObject> ThreedimensionalSnake = getCentreofMass3D();
 
 				All3DSnakes.add(ThreedimensionalSnake);
@@ -1878,17 +1910,20 @@ public class InteractiveActiveContour_ implements PlugIn {
 				new ImagePlus("Measure", measuresnakestack).draw();
 			} // t loop closing
 			IJ.log("SnakeList Size" + All3DSnakes.size());
-
+	           
 		}
-
+			
+		   
 	}
 
 	protected class snakeButtonListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
+			
 			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
 
+			All3DSnakes.clear();
 			int next = thirdDimension;
 
 			if (snakestack != null) {
@@ -1906,6 +1941,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				}
 			}
 			Dialoguesec();
+			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
 			for (int z = next; z <= thirdDimensionSize; ++z) {
 
 				thirdDimension = z;
@@ -1928,6 +1964,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 					snake.Auto = true;
 
 				snake.process();
+			        
 				usefolder = snake.getFolder();
 				addTrackToName = snake.getFile();
 				finalRois = snake.getfinalRois();
@@ -1998,16 +2035,21 @@ public class InteractiveActiveContour_ implements PlugIn {
 			new ImagePlus("Snakes", snakestack).show();
 			new ImagePlus("Measure", measuresnakestack).show();
 			IJ.log("SnakeList Size" + All3DSnakes.size());
-		}
+		          
+		            
+		            }
+		            
+		            
 
 	}
 
 	protected class RedosnakeButtonListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
-
+			
 			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
 
+			All3DSnakes.clear();
 			DialogueRedo();
 
 			thirdDimensionslider = thirdDimension;
@@ -2016,6 +2058,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			otherCurrentView = getotherCurrentView();
 			updatePreview(ValueChange.THIRDDIMTrack);
 			BlobfinderInteractiveSnake snake;
+			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
 			if (NearestNeighbourRois.size() > 0)
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
 						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT);
@@ -2024,7 +2067,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
 						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT);
 
+
+			
 			snake.process();
+		          
 			usefolder = snake.getFolder();
 			addTrackToName = snake.getFile();
 			ArrayList<SnakeObject> currentsnakes = snake.getResult();
@@ -2094,13 +2140,15 @@ public class InteractiveActiveContour_ implements PlugIn {
 			snakestack.deleteLastSlice();
 			measuresnakestack.deleteLastSlice();
 			IJ.log("SnakeList Size" + All3DSnakes.size());
-		}
+		         
+		            
+		            }
 	}
 
 	protected class SinglesnakeButtonListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
-
+			 
 			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
 
 			thirdDimensionslider = thirdDimension;
@@ -2108,7 +2156,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			CurrentView = getCurrentView();
 			otherCurrentView = getotherCurrentView();
 			updatePreview(ValueChange.THIRDDIM);
-
+			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
 			BlobfinderInteractiveSnake snake;
 			if (NearestNeighbourRois.size() > 0)
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
@@ -2118,7 +2166,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
 						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT);
 
+			
 			snake.process();
+		           
 			usefolder = snake.getFolder();
 			addTrackToName = snake.getFile();
 			ArrayList<SnakeObject> currentsnakes = snake.getResult();
@@ -2188,7 +2238,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			snakestack.deleteLastSlice();
 			measuresnakestack.deleteLastSlice();
 			IJ.log("SnakeList Size" + All3DSnakes.size());
-
+		          
 		}
 
 	}
@@ -2682,6 +2732,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		fourthDimensionslider.setBlockIncrement(1);
 		this.fourthDimensionslider = (int) computeValueFromScrollbarPosition(fourthDimensionsliderInit, sliceMin,
 				fourthDimensionSize, fourthDimensionSize);
+		
 
 		/* Instantiation */
 		final GridBagLayout layout = new GridBagLayout();
@@ -2799,10 +2850,19 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		final Label sizeTextX = new Label("Size X = " + sizeX, Label.CENTER);
 		final Label sizeTextY = new Label("Size Y = " + sizeY, Label.CENTER);
-
+		
+		Progressmax = Rois.size();
+		
+		
+		
 		panelThird.setLayout(layout);
 		final Label Namesnake = new Label("Step 3", Label.CENTER);
+		
+	
 		panelThird.add(Namesnake, c);
+		
+	
+		
 		++c.gridy;
 		c.insets = new Insets(10, 160, 10, 160);
 		panelThird.add(Singlesnake, c);
@@ -2840,7 +2900,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 		sizeXbar.addAdjustmentListener(new SizeXListener(sizeTextX, sizeXMin, sizeXMax));
 		sizeYbar.addAdjustmentListener(new SizeYListener(sizeTextY, sizeYMin, sizeYMax));
 		ComputeRoi.addActionListener(new ComputenewRoiListener());
+		
+		
 
+		
+		
 		/* Location */
 		panelFourth.setLayout(layout);
 		final Label Namebig = new Label("Step 4", Label.CENTER);
@@ -2946,6 +3010,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	protected class ComputenewRoiListener implements ActionListener {
 
+		
+		
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			showNew = true;
@@ -2954,6 +3020,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 		}
 	}
 
+	
+	
+
+	
 	protected class SizeXListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
@@ -3918,6 +3988,36 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	}
 
+	public ArrayList<double[]> getRoiMean(MserTree<UnsignedByteType> newtree) {
+
+		final HashSet<Mser<UnsignedByteType>> rootset = newtree.roots();
+
+		final Iterator<Mser<UnsignedByteType>> rootsetiterator = rootset.iterator();
+
+		AllmeanCovar = new ArrayList<double[]>();
+
+		while (rootsetiterator.hasNext()) {
+
+			Mser<UnsignedByteType> rootmser = rootsetiterator.next();
+
+			if (rootmser.size() > 0) {
+
+				final double[] meanandcov = { rootmser.mean()[0], rootmser.mean()[1]};
+				AllmeanCovar.add(meanandcov);
+
+			}
+		}
+
+		// We do this so the ROI remains attached the the same label and is not
+		// changed if the program is run again
+		SortListbyproperty.sortpointList(AllmeanCovar);
+		
+
+		return AllmeanCovar;
+
+	}
+	
+	
 	public RandomAccessibleInterval<FloatType> getCurrentSegment(final int label) {
 
 		RandomAccessibleInterval<FloatType> Roiimg = Boundingboxes.CurrentLabelImage(intimg, currentimg, label);
@@ -4811,8 +4911,33 @@ public class InteractiveActiveContour_ implements PlugIn {
 		return center;
 
 	}
+	
+	/** The name of the frame feature. */
+	public static final String SNAKEPROGRESS= "SNAKEPROGRESS";
+	
+	public final Double getFeature( final String feature )
+	{
+		return features.get( feature );
+	}
+	/**
+	 * Stores the specified feature value for this spot.
+	 *
+	 * @param feature
+	 *            the name of the feature to store, as a {@link String}.
+	 * @param value
+	 *            the value to store, as a {@link Double}. Using
+	 *            <code>null</code> will have unpredicted outcomes.
+	 */
+	public final void putFeature( final String feature, final Double value )
+	{
+		features.put( feature, value );
+	}
+	
 
 	public static void main(String args[]) {
+		
+		
+		
 		new ImageJ();
 		// SpimData2 d = loadSpimData( new File(
 		// "/home/preibisch/Documents/Microscopy/SPIM/Drosophila
@@ -4826,6 +4951,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		frame.getContentPane().add(panel, "Center");
 		frame.setSize(panel.getPreferredSize());
-
+	            
+	
 	}
 }
