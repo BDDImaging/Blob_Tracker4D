@@ -42,14 +42,19 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -149,7 +154,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 	// steps per octave
 	public static int standardSensitivity = 4;
 	int sensitivity = standardSensitivity;
-
+	 JLabel label = new JLabel("Progress..");
+     JProgressBar jpb = new JProgressBar();
+     
+     JFrame frame = new JFrame();
+     JPanel panel = new JPanel();
 	float imageSigma = 0.5f;
 	float sigmaMin = 0.5f;
 	float sigmaMax = 100f;
@@ -190,6 +199,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public float maxVar = 1;
 	int Progressmin = 0;
 	int Progressmax = 100;
+	int max = Progressmax;
 	public float minDiversity = 1;
 	public float thresholdHough = 1;
 	FloatType minval = new FloatType(0);
@@ -214,6 +224,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	RandomAccessibleInterval<FloatType> originalimgB;
 	ImageStack snakestack;
 	ImageStack measuresnakestack;
+
 	
 	ArrayList<double[]> AllmeanCovar;
 	float deltaMax = 400f;
@@ -229,6 +240,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public int minDiversityInit = 1;
 	int thirdDimensionSize = 0;
 	int fourthDimensionSize = 0;
+	ArrayList<ABSnakeFast> snakeoverlay;
+	ArrayList<SnakeObject> currentsnakes;
 	int length = 0;
 	int height = 0;
 	int sizeXinit = 0;
@@ -1808,11 +1821,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 					BlobfinderInteractiveSnake snake;
 					if (NearestNeighbourRois.size() > 0)
 						snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois,
-								sizeX, sizeY, usefolder, addTrackToName, z, indexx, TrackinT);
+								sizeX, sizeY, usefolder, addTrackToName, z, indexx, TrackinT, jpb);
 					else
 
 						snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY,
-								usefolder, addTrackToName, z, indexx, TrackinT);
+								usefolder, addTrackToName, z, indexx, TrackinT, jpb);
 
 					RoiManager manager = RoiManager.getInstance();
 					if (manager != null) {
@@ -1834,9 +1847,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 					addTrackToName = snake.getFile();
 
 					finalRois = snake.getfinalRois();
-					ArrayList<SnakeObject> currentsnakes = snake.getResult();
+					currentsnakes = snake.getResult();
 
-					ArrayList<ABSnakeFast> snakeoverlay = snake.getABsnake();
+					snakeoverlay = snake.getABsnake();
 
 					if (snake.displaysnake) {
 
@@ -1915,7 +1928,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			
 		   
 	}
-
+	
 	protected class snakeButtonListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
@@ -1942,6 +1955,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 			}
 			Dialoguesec();
 			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
+			
+			
+			
+			
 			for (int z = next; z <= thirdDimensionSize; ++z) {
 
 				thirdDimension = z;
@@ -1954,11 +1971,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 				BlobfinderInteractiveSnake snake;
 				if (NearestNeighbourRois.size() > 0)
 					snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
-							sizeY, usefolder, addTrackToName, z, 0, TrackinT);
+							sizeY, usefolder, addTrackToName, z, 0, TrackinT, jpb);
 				else
 
 					snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
-							addTrackToName, z, 0, TrackinT);
+							addTrackToName, z, 0, TrackinT, jpb);
 
 				if (Auto && z > next)
 					snake.Auto = true;
@@ -1968,9 +1985,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 				usefolder = snake.getFolder();
 				addTrackToName = snake.getFile();
 				finalRois = snake.getfinalRois();
-				ArrayList<SnakeObject> currentsnakes = snake.getResult();
+				currentsnakes = snake.getResult();
 
-				ArrayList<ABSnakeFast> snakeoverlay = snake.getABsnake();
+				snakeoverlay = snake.getABsnake();
 				if (snake.displaysnake) {
 
 					if (imp != null)
@@ -2061,11 +2078,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
 			if (NearestNeighbourRois.size() > 0)
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
-						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT);
+						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb);
 			else
 
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
-						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT);
+						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb);
 
 
 			
@@ -2073,9 +2090,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 		          
 			usefolder = snake.getFolder();
 			addTrackToName = snake.getFile();
-			ArrayList<SnakeObject> currentsnakes = snake.getResult();
+			currentsnakes = snake.getResult();
 			finalRois = snake.getfinalRois();
-			ArrayList<ABSnakeFast> snakeoverlay = snake.getABsnake();
+		    snakeoverlay = snake.getABsnake();
 
 			if (snake.displaysnake) {
                  int z = 1;
@@ -2144,37 +2161,29 @@ public class InteractiveActiveContour_ implements PlugIn {
 		            
 		            }
 	}
+	class Progress extends SwingWorker<Void, Void> {
 
-	protected class SinglesnakeButtonListener implements ActionListener {
 		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-			 
-			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
-
-			thirdDimensionslider = thirdDimension;
-			fourthDimensionslider = fourthDimension;
-			CurrentView = getCurrentView();
-			otherCurrentView = getotherCurrentView();
-			updatePreview(ValueChange.THIRDDIM);
-			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
+		protected Void doInBackground() throws Exception {
 			BlobfinderInteractiveSnake snake;
 			if (NearestNeighbourRois.size() > 0)
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
-						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT);
+						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb);
 			else
 
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
-						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT);
-
-			
+						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb);
+			jpb.setIndeterminate(false);
 			snake.process();
-		           
 			usefolder = snake.getFolder();
 			addTrackToName = snake.getFile();
-			ArrayList<SnakeObject> currentsnakes = snake.getResult();
+			jpb.getValue();
+			
+			currentsnakes = snake.getResult();
 			finalRois = snake.getfinalRois();
-			ArrayList<ABSnakeFast> snakeoverlay = snake.getABsnake();
-
+			snakeoverlay = snake.getABsnake();
+	
+			
 			snakestack.addSlice(imp.getImageStack().getProcessor(1).convertToRGB());
 			measuresnakestack.addSlice(measureimp.getImageStack().getProcessor(1).convertToRGB());
 			
@@ -2239,6 +2248,81 @@ public class InteractiveActiveContour_ implements PlugIn {
 			measuresnakestack.deleteLastSlice();
 			IJ.log("SnakeList Size" + All3DSnakes.size());
 		          
+			return null;
+		}
+		 @Override
+         protected void done() {
+             try {
+            	 jpb.setIndeterminate(false);
+                 get();
+                 
+                 JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
+             } catch (ExecutionException | InterruptedException e) {
+                 e.printStackTrace();
+             }
+		
+		
+		 }
+		
+	}
+	
+	
+	public  void go() {
+	      
+	       
+        jpb.setIndeterminate(false);
+    	
+	
+		  
+        
+	        
+        jpb.setMaximum(max);
+        panel.add(label);
+        panel.add(jpb);
+        frame.add(panel);
+        frame.pack();
+        frame.setSize(200,90);
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+       
+      
+        
+        
+        
+        Progress dosnake = new Progress();
+		dosnake.execute();
+      
+       
+	}
+	
+	
+	protected class SinglesnakeButtonListener implements ActionListener {
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+			 
+			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
+
+			thirdDimensionslider = thirdDimension;
+			fourthDimensionslider = fourthDimension;
+			CurrentView = getCurrentView();
+			otherCurrentView = getotherCurrentView();
+			updatePreview(ValueChange.THIRDDIM);
+			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
+			
+
+			
+			SwingUtilities.invokeLater(new Runnable() {
+			      @Override
+			      public void run() {
+			    	  
+			    	  go();
+			    	  
+			      }
+	         
+			});
+			
+			
+		
 		}
 
 	}
