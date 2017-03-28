@@ -55,6 +55,8 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -155,7 +157,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public static int standardSensitivity = 4;
 	int sensitivity = standardSensitivity;
 	 JLabel label = new JLabel("Progress..");
-     JProgressBar jpb = new JProgressBar();
+     JProgressBar jpb;
      
      JFrame frame = new JFrame();
      JPanel panel = new JPanel();
@@ -510,6 +512,14 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public void run(String arg) {
 
 		
+	
+       // Progressbar color
+	//	UIManager.put("ProgressBar.selectionForeground", Color.BLUE);
+	//	UIManager.put("ProgressBar.foreground", Color.BLUE);
+		UIManager.put("ProgressBar.font",Font.BOLD);
+		//UIManager.put("ProgressBar.background", Color.BLUE);
+		
+		jpb = new JProgressBar();
 		Rois = new ArrayList<Roi>();
 		peaks = new ArrayList<RefinedPeak<Point>>();
 		
@@ -804,6 +814,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 				Rois = getcurrentRois(newtree);
                 ArrayList<double[]> centerRoi = getRoiMean(newtree);
                 
+                
+                
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
 					double[] center = new double[]{centerRoi.get(index)[0], centerRoi.get(index)[1]};
@@ -837,7 +849,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				final DogDetection<FloatType> newdog = new DogDetection<FloatType>(Views.extendBorder(currentimg),
 						interval, new double[] { 1, 1 }, sigma, sigma2, type, threshold, true);
-
+				
 				peaks = newdog.getSubpixelPeaks();
 
 				Rois = getcurrentRois(peaks);
@@ -879,6 +891,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	              Rois.addAll(currentroi); 
 					
 				}
+
 				  ArrayList<double[]> centerRoi = getRoiMean(newtree);
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
@@ -934,7 +947,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	              
 					
 				}
-
+				
 				for (int index = 0; index < Rois.size(); ++index) {
                     double[] center = new double[]{peaks.get(index).getDoublePosition(0), peaks.get(index).getDoublePosition(1)};
 					
@@ -1015,7 +1028,9 @@ public class InteractiveActiveContour_ implements PlugIn {
               Rois.addAll(currentroi); 
 				
 			}
-			
+
+            IJ.log("MSER parameters:" +" " + " thirdDimension: " +" " + thirdDimension +" " + "fourthDimension: " +" " + fourthDimension);
+            IJ.log("Delta " +" " + delta +" " + "minSize " +" " + minSize +" " + "maxSize " +" " + maxSize +" " + " maxVar " +" " + maxVar +" " + "minDIversity " +" " + minDiversity);
 			for (int index = 0; index < Rois.size(); ++index) {
 
 				Roi or = Rois.get(index);
@@ -1063,6 +1078,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 				
 			}
 
+			 IJ.log("DoG parameters:" +" " + " thirdDimension: " +" " + thirdDimension +" " + "fourthDimension: " +" " + fourthDimension);
+             IJ.log("Sigma " +" " + sigma +" " + "Sigma2 " +" " + sigma2 +" " + "Threshold " +" " + threshold);
+			
+			
 			for (int index = 0; index < Rois.size(); ++index) {
 
 				Roi or = Rois.get(index);
@@ -1094,6 +1113,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 			newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 			Rois = getcurrentRois(newtree);
 
+            IJ.log("MSER parameters:" +" " + " thirdDimension: " +" " + thirdDimension +" " + "fourthDimension: " +" " + fourthDimension);
+            IJ.log("Delta " +" " + delta +" " + "minSize " +" " + minSize +" " + "maxSize " +" " + maxSize +" " + " maxVar " +" " + maxVar +" " + "minDIversity " +" " + minDiversity);
 			for (int index = 0; index < Rois.size(); ++index) {
 
 				Roi or = Rois.get(index);
@@ -1150,6 +1171,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 			final DogDetection<FloatType> newdog = new DogDetection<FloatType>(Views.extendBorder(currentimg), interval,
 					new double[] { 1, 1 }, sigma, sigma2, type, threshold, true);
 
+			 IJ.log("DoG parameters:" +" " + " thirdDimension: " +" " + thirdDimension +" " + "fourthDimension: " +" " + fourthDimension);
+             IJ.log("Sigma " +" " + sigma +" " + "Sigma2 " +" " + sigma2 +" " + "Threshold " +" " + threshold);
 			peaks = newdog.getSubpixelPeaks();
 
 			Rois = getcurrentRois(peaks);
@@ -1762,10 +1785,13 @@ public class InteractiveActiveContour_ implements PlugIn {
 			}
 		}
 	}
+	class ProgressAll extends SwingWorker<Void, Void> {
 
-	protected class moveAllListener implements ActionListener {
 		@Override
-		public void actionPerformed(final ActionEvent arg0) {
+		protected Void doInBackground() throws Exception {
+	
+			
+			
 			
 			// add listener to the imageplus slice slider
 			sliceObserver = new SliceObserver(imp, new ImagePlusListener());
@@ -1821,11 +1847,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 					BlobfinderInteractiveSnake snake;
 					if (NearestNeighbourRois.size() > 0)
 						snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois,
-								sizeX, sizeY, usefolder, addTrackToName, z, indexx, TrackinT, jpb);
+								sizeX, sizeY, usefolder, addTrackToName, z, indexx, TrackinT, jpb, thirdDimensionSize);
 					else
 
 						snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY,
-								usefolder, addTrackToName, z, indexx, TrackinT, jpb);
+								usefolder, addTrackToName, z, indexx, TrackinT, jpb, thirdDimensionSize);
 
 					RoiManager manager = RoiManager.getInstance();
 					if (manager != null) {
@@ -1923,16 +1949,81 @@ public class InteractiveActiveContour_ implements PlugIn {
 				new ImagePlus("Measure", measuresnakestack).draw();
 			} // t loop closing
 			IJ.log("SnakeList Size" + All3DSnakes.size());
+		          
+			return null;
+		}
+		
+		 @Override
+         protected void done() {
+             try {
+            	 jpb.setIndeterminate(false);
+                 get();
+                 frame.dispose();
+                 JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
+             } catch (ExecutionException | InterruptedException e) {
+                 e.printStackTrace();
+             }
+		
+		
+		 }
+		
+	}
+	
+	public  void goAll() {
+	      
+	       
+        jpb.setIndeterminate(false);
+    	
+	
+		
+	        
+        jpb.setMaximum(max);
+        panel.add(label);
+        panel.add(jpb);
+        frame.add(panel);
+        frame.pack();
+        frame.setSize(200,100);
+        frame.setLocationRelativeTo(panelCont);
+        frame.setVisible(true);
+       
+      
+        
+        
+        
+        ProgressAll dosnake = new ProgressAll();
+		dosnake.execute();
+      
+       
+	}
+	
+	
+	protected class moveAllListener implements ActionListener {
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+			
+			
+
+			SwingUtilities.invokeLater(new Runnable() {
+			      @Override
+			      public void run() {
+			    	  
+			    	  goAll();
+			    	  
+			      }
+	         
+			});
+			
+		
 	           
 		}
 			
 		   
 	}
 	
-	protected class snakeButtonListener implements ActionListener {
-		@Override
-		public void actionPerformed(final ActionEvent arg0) {
+	class ProgressSnake extends SwingWorker<Void, Void> {
 
+		@Override
+		protected Void doInBackground() throws Exception {
 			
 			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
 
@@ -1965,17 +2056,17 @@ public class InteractiveActiveContour_ implements PlugIn {
 				thirdDimensionslider = thirdDimension;
 				CurrentView = getCurrentView();
 				otherCurrentView = getotherCurrentView();
-
+				 
 				updatePreview(ValueChange.THIRDDIMTrack);
 
 				BlobfinderInteractiveSnake snake;
 				if (NearestNeighbourRois.size() > 0)
 					snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
-							sizeY, usefolder, addTrackToName, z, 0, TrackinT, jpb);
+							sizeY, usefolder, addTrackToName, z, 0, TrackinT, jpb, thirdDimensionSize);
 				else
 
 					snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
-							addTrackToName, z, 0, TrackinT, jpb);
+							addTrackToName, z, 0, TrackinT, jpb, thirdDimensionSize);
 
 				if (Auto && z > next)
 					snake.Auto = true;
@@ -2053,17 +2144,82 @@ public class InteractiveActiveContour_ implements PlugIn {
 			new ImagePlus("Measure", measuresnakestack).show();
 			IJ.log("SnakeList Size" + All3DSnakes.size());
 		          
+			
+			return null;
+		}
+		
+		 @Override
+         protected void done() {
+             try {
+            	 jpb.setIndeterminate(false);
+                 get();
+                 frame.dispose();
+                 JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
+             } catch (ExecutionException | InterruptedException e) {
+                 e.printStackTrace();
+             }
+		
+		
+		 }
+		
+	}
+	
+	
+	
+	
+	public  void goSnake() {
+		
+		
+		panel.removeAll();
+		 
+        jpb.setIndeterminate(false);
+        jpb.setMaximum(max);
+       
+      
+        panel.add(jpb);
+        frame.add(panel);
+        frame.pack();
+        frame.setSize(200,100);
+        frame.setLocationRelativeTo(panelCont);
+        frame.setVisible(true);
+       
+      
+        
+        
+        
+        ProgressSnake dosnake = new ProgressSnake();
+		dosnake.execute();
+      
+       
+	}
+	
+	
+	
+	protected class snakeButtonListener implements ActionListener {
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+
+			SwingUtilities.invokeLater(new Runnable() {
+			      @Override
+			      public void run() {
+			    	  
+			    	  goSnake();
+			    	  
+			      }
+	         
+			});
 		            
 		            }
 		            
 		            
 
 	}
+	
+	class ProgressRedo extends SwingWorker<Void, Void> {
 
-	protected class RedosnakeButtonListener implements ActionListener {
 		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-			
+		protected Void doInBackground() throws Exception {
+	
 			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
 
 			All3DSnakes.clear();
@@ -2078,11 +2234,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
 			if (NearestNeighbourRois.size() > 0)
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
-						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb);
+						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb, thirdDimensionSize);
 			else
 
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
-						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb);
+						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb, thirdDimensionSize);
 
 
 			
@@ -2158,21 +2314,93 @@ public class InteractiveActiveContour_ implements PlugIn {
 			measuresnakestack.deleteLastSlice();
 			IJ.log("SnakeList Size" + All3DSnakes.size());
 		         
-		            
+		          
+			return null;
+		}
+		
+		 @Override
+         protected void done() {
+             try {
+            	 jpb.setIndeterminate(false);
+                 get();
+                 frame.dispose();
+                 JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
+             } catch (ExecutionException | InterruptedException e) {
+                 e.printStackTrace();
+             }
+		
+		
+		 }
+		
+	}
+	
+	public  void goRedo() {
+	      
+	       
+        jpb.setIndeterminate(false);
+    	
+	
+		  
+        
+	        
+        jpb.setMaximum(max);
+        panel.add(label);
+        panel.add(jpb);
+        frame.add(panel);
+        frame.pack();
+        frame.setSize(200,100);
+        frame.setLocationRelativeTo(panelCont);
+        frame.setVisible(true);
+       
+      
+        
+        
+        
+        ProgressRedo dosnake = new ProgressRedo();
+		dosnake.execute();
+      
+       
+	}
+	
+
+	protected class RedosnakeButtonListener implements ActionListener {
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+			
+		
+			SwingUtilities.invokeLater(new Runnable() {
+			      @Override
+			      public void run() {
+			    	  
+			    	  goRedo();
+			    	  
+			      }
+	         
+			});
 		            }
 	}
 	class Progress extends SwingWorker<Void, Void> {
 
 		@Override
 		protected Void doInBackground() throws Exception {
+			 
+			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
+
+			thirdDimensionslider = thirdDimension;
+			fourthDimensionslider = fourthDimension;
+			CurrentView = getCurrentView();
+			otherCurrentView = getotherCurrentView();
+			updatePreview(ValueChange.THIRDDIM);
+			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
+			
 			BlobfinderInteractiveSnake snake;
 			if (NearestNeighbourRois.size() > 0)
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
-						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb);
+						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb, thirdDimensionSize);
 			else
 
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
-						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb);
+						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb, thirdDimensionSize);
 			jpb.setIndeterminate(false);
 			snake.process();
 			usefolder = snake.getFolder();
@@ -2255,7 +2483,7 @@ public class InteractiveActiveContour_ implements PlugIn {
              try {
             	 jpb.setIndeterminate(false);
                  get();
-                 
+                 frame.dispose();
                  JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
              } catch (ExecutionException | InterruptedException e) {
                  e.printStackTrace();
@@ -2281,8 +2509,8 @@ public class InteractiveActiveContour_ implements PlugIn {
         panel.add(jpb);
         frame.add(panel);
         frame.pack();
-        frame.setSize(200,90);
-        frame.setLocationRelativeTo(null);
+        frame.setSize(200,100);
+        frame.setLocationRelativeTo(panelCont);
         frame.setVisible(true);
        
       
@@ -2299,15 +2527,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	protected class SinglesnakeButtonListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
-			 
-			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
-
-			thirdDimensionslider = thirdDimension;
-			fourthDimensionslider = fourthDimension;
-			CurrentView = getCurrentView();
-			otherCurrentView = getotherCurrentView();
-			updatePreview(ValueChange.THIRDDIM);
-			putFeature( SNAKEPROGRESS, Double.valueOf( AllSliceSnakes.size() ) );
+			
 			
 
 			
@@ -2945,7 +3165,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 	
 		panelThird.add(Namesnake, c);
 		
-	
 		
 		++c.gridy;
 		c.insets = new Insets(10, 160, 10, 160);
@@ -3081,7 +3300,28 @@ public class InteractiveActiveContour_ implements PlugIn {
 		Auto.addItemListener(new AutoListener());
 		Ends.setForeground(new Color(255, 255, 255));
 		Ends.setBackground(new Color(1, 0, 1));
+		
+		
+		
+		panelSeventh.setLayout(layout);
+		final Label Done = new Label("Hope that everything was to your satisfaction!");
+		final Button Exit= new Button("Close and exit");
+		
+		
+		Done.setBackground(new Color(1, 0, 1));
+		Done.setForeground(new Color(255, 255, 255));
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelSeventh.add(Done, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelSeventh.add(Exit, c);
+		
+		
 
+		Exit.addActionListener(new FinishedButtonListener(panelCont, true));
+		
 		Cardframe.add(panelCont, BorderLayout.CENTER);
 		Cardframe.add(control, BorderLayout.SOUTH);
 		Cardframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -3091,7 +3331,33 @@ public class InteractiveActiveContour_ implements PlugIn {
 		Cardframe.pack();
 
 	}
+	protected class FinishedButtonListener implements ActionListener {
+		final JPanel parent;
+		final boolean cancel;
 
+		public FinishedButtonListener(JPanel parent, final boolean cancel) {
+			this.parent = parent;
+			this.cancel = cancel;
+		}
+
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+			wasCanceled = cancel;
+			close(parent, sliceObserver, roiListener);
+		}
+	}
+	
+	protected final void close(final JPanel parent, final SliceObserver sliceObserver, RoiListener roiListener) {
+		if (parent != null)
+			System.exit(0);
+
+		if (sliceObserver != null)
+			sliceObserver.unregister();
+		if (roiListener != null)
+			imp.getCanvas().removeMouseListener(roiListener);
+
+		isFinished = true;
+	}
 	protected class ComputenewRoiListener implements ActionListener {
 
 		
@@ -4489,12 +4755,24 @@ public class InteractiveActiveContour_ implements PlugIn {
 			// impcopy = ImageJFunctions.show(originalimg);
 
 			UserchosenCostFunction = new PixelratiowDistCostFunction(alpha, beta);
-			if (showKalman)
+			if (showKalman){
 				blobtracker = new KFsearch(All3DSnakes, UserchosenCostFunction, maxSearchradius, initialSearchradius,
 						thirdDimensionSize, missedframes);
-			if (showNN)
+				
+				IJ.log("Kalman Filter parameters : ");
+				IJ.log("Distance weightage alpha" + " " + alpha + " " +" Pixel ratio weightage beta" + " " + beta + " " + "  maxSearchradius " + " " + maxSearchradius);
+				IJ.log(" initialSearchradius " + "  " + initialSearchradius + " " + " missedframes " + " " + missedframes);	
+			}
+			if (showNN){
 				blobtracker = new NNsearch(All3DSnakes, maxSearchradius, thirdDimensionSize);
-
+				IJ.log("Kalman Filter parameters : ");
+				IJ.log("maxSearchradius " + " " + maxSearchradius);
+				
+				
+			}
+			
+			
+			
 			blobtracker.reset();
 
 			blobtracker.process();
@@ -4509,7 +4787,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			TrackModel model = new TrackModel(graph);
 			model.getDirectedNeighborIndex();
-			IJ.log(" " + graph.vertexSet().size());
 			ResultsTable rt = new ResultsTable();
 			// Get all the track id's
 			for (final Integer id : model.trackIDs(true)) {
@@ -4604,20 +4881,38 @@ public class InteractiveActiveContour_ implements PlugIn {
 					rt.addValue("Number of Pixels Measureimage ", list.get(index).numberofPixelsSecRoI);
 					rt.addValue("Mean Intensity Measureimage ", list.get(index).meanIntensitySecROI);
 
-					IJ.log("\t" + list.get(index).thirdDimension + "\t" + "\t" + id + "\t" + "\t"
-							+ (list.get(index).centreofMass[0]) + "\t" + "\t" + (list.get(index).centreofMass[1]) + "\t"
-							+ "\t" + (list.get(index).centreofMass[2]) + "\t" + "\t" + (list.get(index).IntensityROI)
-							+ (list.get(index).numberofPixels) + "\t" + "\t" + (list.get(index).meanIntensityROI) + "\t"
-							+ "\t" + (list.get(index).IntensitySecROI) + "\t" + "\t"
-							+ (list.get(index).numberofPixelsSecRoI) + "\t" + "\t"
-							+ (list.get(index).meanIntensitySecROI) + "\t" + "\t" + "\n");
+				
 
 				}
 
 				if (SaveXLS)
 					saveResultsToExcel(usefolder + "//" + addTrackToName + ".xls", rt);
 
+				
+				Overlay o = totalimp.getOverlay();
+
+				if (o == null) {
+					o = new Overlay();
+					totalimp.setOverlay(o);
+				}
+				
+				Roi newellipse = new Roi((int) list.get(0).centreofMass[0],
+						(int) list.get(0).centreofMass[1], totalimp);
+			
+
+				newellipse.setStrokeColor(inactiveColor);
+				newellipse.setStrokeWidth(1);
+				newellipse.setName("TrackID: " + id);
+				
+				o.add(newellipse);
+				o.drawLabels(true);
+				
+				o.drawNames(true);
+				
 			}
+			
+		
+
 
 			rt.show("Results");
 

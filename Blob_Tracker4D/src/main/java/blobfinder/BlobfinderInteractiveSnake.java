@@ -22,11 +22,11 @@ import java.util.concurrent.ExecutionException;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollBar;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
+import javax.swing.UIManager;
 
 import org.apache.poi.ss.formula.WorkbookEvaluator;
 
@@ -75,21 +75,15 @@ import snakes.SnakeConfig;
 import snakes.SnakeConfigDriver;
 import snakes.SnakeObject;
 
-
 public class BlobfinderInteractiveSnake implements Blobfinder {
 
-	  JLabel label = new JLabel("Progress.." + percent);
-      int max = Progressmax;
-      JFrame frame = new JFrame();
-      JPanel panel = new JPanel();
-      
 	private static final String BASE_ERROR_MSG = "[Blobfinder] ";
 	protected Logger logger = Logger.DEFAULT_LOGGER;
 	protected String errorMessage;
 	private ArrayList<SnakeObject> ProbBlobs;
 	private final RandomAccessibleInterval<FloatType> source;
 	private final RandomAccessibleInterval<FloatType> target;
-	
+
 	private final ArrayList<Roi> rois;
 	ArrayList<Roi> finalrois;
 	ArrayList<ComSnake> comrois;
@@ -98,10 +92,10 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 
 	RandomAccessibleInterval<FloatType> resultsource;
 
-	ArrayList<ABSnakeFast>  snakelist;
-	
-	ArrayList<ABSnakeFast>  measuresnakelist;
-	
+	ArrayList<ABSnakeFast> snakelist;
+
+	ArrayList<ABSnakeFast> measuresnakelist;
+
 	RandomAccessibleInterval<FloatType> currentimg;
 	ImageStack pile_seg = null;
 	final boolean TrackinT;
@@ -117,7 +111,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	Roi processRoi = null;
 	public Color colorDraw = Color.RED;
 	public boolean darktoBright = false;
-	
+
 	private final int ndims;
 	private final int fourthDimension;
 	private final int thirdDimension;
@@ -170,18 +164,20 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	static int Progressmin = 0;
 	static int Progressmax = 100;
 	final JProgressBar jpb;
+	final int duration;
 	RoiEncoder saveRoi;
-	String usefolder ;
+	String usefolder;
 	String addToName;
-	private final ConcurrentHashMap< String, Double > features = new ConcurrentHashMap< String, Double >();
+	private final ConcurrentHashMap<String, Double> features = new ConcurrentHashMap<String, Double>();
+
 	public BlobfinderInteractiveSnake(final RandomAccessibleInterval<FloatType> source,
-			final RandomAccessibleInterval<FloatType> target, ArrayList<Roi> rois,
-			final double sizeX, final double sizeY, final String usefolder, final String addToName,
-			final int thirdDimension, final int fourthDimension, final boolean TrackinT, final JProgressBar jpb){
-		
+			final RandomAccessibleInterval<FloatType> target, ArrayList<Roi> rois, final double sizeX,
+			final double sizeY, final String usefolder, final String addToName, final int thirdDimension,
+			final int fourthDimension, final boolean TrackinT, final JProgressBar jpb, final int duration) {
+
 		this.source = source;
 		this.target = target;
-	    this.thirdDimension = thirdDimension;
+		this.thirdDimension = thirdDimension;
 		this.fourthDimension = fourthDimension;
 		this.TrackinT = TrackinT;
 		this.rois = rois;
@@ -190,70 +186,48 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		this.usefolder = usefolder;
 		this.addToName = addToName;
 		this.jpb = jpb;
+		this.duration = duration;
 		ndims = source.numDimensions();
-	
-		
-		
-		
+
 	}
-	
-	
-	
-	
 
-
-	
-	
-	
-	
-	
 	@Override
 	public ArrayList<SnakeObject> getResult() {
-		
+
 		return ProbBlobs;
 	}
 
 	public ArrayList<ComSnake> getfinalRois() {
-		
+
 		return comrois;
 	}
-	
-	public String getFolder(){
-		
+
+	public String getFolder() {
+
 		return usefolder;
 	}
-	
-   public String getFile(){
-		
+
+	public String getFile() {
+
 		return addToName;
 	}
-  
-	
+
 	@Override
 	public boolean checkInput() {
-		if (source.numDimensions() > 2 ) {
+		if (source.numDimensions() > 2) {
 			errorMessage = BASE_ERROR_MSG + " Can only operate on 1D, 2D, make slices of your stack . Got "
 					+ source.numDimensions() + "D.";
 			return false;
 		}
 		return true;
 	}
-	
-	
-
-	
 
 	@Override
 	public boolean process() {
-		
-		
-		
-		
-		
-		
-	//	ProgressBar newbar = new ProgressBar();
-	//	newbar.setVisible(true);
-	//	newbar.setStringPainted(true);
+
+		// ProgressBar newbar = new ProgressBar();
+		// newbar.setVisible(true);
+		// newbar.setStringPainted(true);
 		configDriver = new SnakeConfigDriver();
 		AdvancedParameters();
 
@@ -262,11 +236,11 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		// original stack
 
 		ProbBlobs = new ArrayList<SnakeObject>();
-     
+
 		finalrois = new ArrayList<Roi>();
-		
+
 		comrois = new ArrayList<ComSnake>();
-		
+
 		boolean dialog;
 		boolean dialogAdvanced;
 		if (Auto)
@@ -276,32 +250,15 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		// many rois
 		if (advanced)
 			dialogAdvanced = AdvancedDialog();
-		
-	/*	
-		SwingUtilities.invokeLater(new Runnable() {
-		      @Override
-		      public void run() {
-		    	  
-		    	  go();
-		    	  
-		      }
-         
-		});
-	
-	*/	
-		
-		
+
 		nbRois = rois.size();
-		
-		IJ.log("processing " + nbRois + "rois");
+
+		IJ.log("processing " + " fourthDimension " + " " + fourthDimension + " " + "thirdDimension" + " "
+				+ thirdDimension);
 		System.out.println("processing " + nbRois + "rois");
 		ArrayList<Roi> RoisOrig = rois;
 		Roi[] RoisCurrent = new Roi[nbRois];
 		Roi[] RoisResult = new Roi[nbRois];
-
-		
-		
-		
 
 		regmin = reg / 2.0;
 		regmax = reg;
@@ -310,124 +267,107 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(source, type);
 		resultsource = factory.create(source, type);
 
-		
-		
-	        
-      
+		if (advanced) {
+			IJ.log("Snake Parameters:" + " thirdDimension: " + " " + thirdDimension + " " + "fourthDimension: "
+					+ fourthDimension);
+			IJ.log(" Displacement_min " + " " + Displacement_min + " " + " Displacement_max" + " " + Displacement_max
+					+ " " + " Threshold_dist_positive " + " " + Threshold_dist_positive);
+			IJ.log(
 
-
+					" Threshold_dist_negative " + " " + Threshold_dist_negative + " " + " Inv_alpha_min  " + " "
+							+ Inv_alpha_min + "Inv_alpha_max " + " " + Inv_alpha_max);
+			IJ.log(" Reg_min " + " " + Reg_min + " " + "Reg_max " + " " + Reg_max + " " + " Mul_factor " + " "
+					+ Mul_factor + " " + " Gradthresh " + " " + Gradthresh + " " + " Number of snake iterations " + " "
+					+ ite);
+		}
 		Roi roi;
 
 		currentimg = source;
 
 		// Expand the image by 10 pixels
-		
-		Interval spaceinterval = Intervals.createMinMax(new long[] {currentimg.min(0),currentimg.min(1), currentimg.max(0), currentimg.max(1)});
+
+		Interval spaceinterval = Intervals.createMinMax(
+				new long[] { currentimg.min(0), currentimg.min(1), currentimg.max(0), currentimg.max(1) });
 		Interval interval = Intervals.expand(spaceinterval, 10);
 		currentimg = Views.interval(Views.extendBorder(currentimg), interval);
-		
-	
+
 		ABSnakeFast snake;
-		
-		
-	 
-	 
-	 
-	    // Simulate doing something useful.
+
+		// Simulate doing something useful.
 		for (int i = 0; i < RoisOrig.size(); i++) {
-			
-			
-			
-			
-			
-     
 
 			roi = RoisOrig.get(i);
-		
-		IJ.log("processing fourthDimension no. " + fourthDimension + " thirdDimension no. " +  thirdDimension  +  " with roi " + i);
-		System.out.println("processing fourthDimension no. " + fourthDimension + " thirdDimension no. " +  thirdDimension  +  " with roi " + i);
 
-		
-		snake = processSnake(roi, i + 1);
-		snake.killImages();
+			System.out.println("processing fourthDimension no. " + fourthDimension + " thirdDimension no. "
+					+ thirdDimension + " with roi " + i);
 
-		//snake.DrawSnake(overlay, source, colorDraw, 1);
-		RoisResult[i] = snake.createRoi();
-		RoisResult[i].setName("res-" + i);
-		RoisCurrent[i] = snake.createRoi();
+			snake = processSnake(roi, i + 1);
+			snake.killImages();
 
-		snakelist.add(snake);
-		
-		if (RoisResult[i] != null) {
-		
-			final double[] props = getProps(RoisResult[i]);
-			final double[] center = new double[]{props[0], props[1], props[2]};
-			final double Intensitysource = props[3];
-			final int Numberofpixels = (int)props[4];
-			final double MeanIntensitysource = props[5];
-			final double Circularity = props[6];
-			final double Intensitytarget = props[7];
-			final int NumberofpixelsTarget = (int)props[8];
-			final double MeanIntensitytarget = props[9];
-			final double Size = props[10];
-			finalrois.add(RoisResult[i]);
-			
-			
-			ComSnake csnake = new ComSnake(thirdDimension, fourthDimension, center, RoisResult[i]);
-			comrois.add(csnake);
-			
-			SnakeObject currentsnake = new SnakeObject(thirdDimension, fourthDimension, i, RoisResult[i], center, Intensitysource,
-					 Numberofpixels, MeanIntensitysource, Intensitytarget, NumberofpixelsTarget, MeanIntensitytarget, Circularity, Size);
-			ProbBlobs.add(currentsnake);
-			putFeature( SNAKEPROGRESS, Double.valueOf( ProbBlobs.size() ) );
-			
-			percent = ( Math.round(100*(i + 1)/ (nbRois) ));
-			
+			// snake.DrawSnake(overlay, source, colorDraw, 1);
+			RoisResult[i] = snake.createRoi();
+			RoisResult[i].setName("res-" + i);
+			RoisCurrent[i] = snake.createRoi();
 
-			jpb.setValue((int)percent);
-			 jpb.setStringPainted(true);
-			
+			snakelist.add(snake);
 
-			
+			if (RoisResult[i] != null) {
+
+				final double[] props = getProps(RoisResult[i]);
+				final double[] center = new double[] { props[0], props[1], props[2] };
+				final double Intensitysource = props[3];
+				final int Numberofpixels = (int) props[4];
+				final double MeanIntensitysource = props[5];
+				final double Circularity = props[6];
+				final double Intensitytarget = props[7];
+				final int NumberofpixelsTarget = (int) props[8];
+				final double MeanIntensitytarget = props[9];
+				final double Size = props[10];
+				finalrois.add(RoisResult[i]);
+
+				ComSnake csnake = new ComSnake(thirdDimension, fourthDimension, center, RoisResult[i]);
+				comrois.add(csnake);
+
+				SnakeObject currentsnake = new SnakeObject(thirdDimension, fourthDimension, i, RoisResult[i], center,
+						Intensitysource, Numberofpixels, MeanIntensitysource, Intensitytarget, NumberofpixelsTarget,
+						MeanIntensitytarget, Circularity, Size);
+				ProbBlobs.add(currentsnake);
+				putFeature(SNAKEPROGRESS, Double.valueOf(ProbBlobs.size()));
+
+				percent = (Math.round(100 * (i + 1) / (nbRois)));
+
+				jpb.setValue((int) percent);
+				jpb.setOpaque(true);
+				jpb.setStringPainted(true);
+			//	jpb.setForeground(Color.YELLOW);
+				jpb.setString("3D point = " + thirdDimension + "/" + duration);
+				
+			}
+
+			if (saverois) {
+
+				try {
+					saveRoi = new RoiEncoder(usefolder + "//" + "SnakeRoi" + (i) + "thirdDim" + thirdDimension
+							+ "dourthDim" + fourthDimension + ".roi");
+					saveRoi.write(RoisResult[i]);
+				} catch (IOException ex) {
+
+				}
+
+			}
 
 		}
-		
-		if (saverois){
-		
-		  try {
-              saveRoi = new RoiEncoder(usefolder + "//" + "SnakeRoi" + (i) + "thirdDim" + thirdDimension + "dourthDim" + fourthDimension + ".roi");
-              saveRoi.write(RoisResult[i]);
-          } catch (IOException ex) {
 
-          }
-		
-	}
-	     
-	    }
-		
-
-		
-		
-		
-		
-		
-		
-		
-		
 		return true;
 	}
-	
-	public ArrayList<ABSnakeFast> getABsnake(){
-		
-		
+
+	public ArrayList<ABSnakeFast> getABsnake() {
+
 		return snakelist;
 	}
-	
+
 	private boolean Dialogue() {
-		
-		
-		
-		
+
 		// array of colors
 		String[] colors = { "Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "Black", "White" };
 		int indexcol = 0;
@@ -437,12 +377,11 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		gd.addNumericField("Number_of_iterations:", ite, 0);
 		gd.addChoice("Draw_color:", colors, colors[indexcol]);
 		gd.addCheckbox("Save_rois:", saverois);
-		
+
 		gd.addCheckbox("Display Snake Stack", displaysnake);
 		gd.addCheckbox("Advanced_options", advanced);
-		 gd.addStringField("Use_folder:", usefolder);
-		 gd.addStringField("Choose_filestartname:", addToName);
-		 
+		gd.addStringField("Use_folder:", usefolder);
+		gd.addStringField("Choose_filestartname:", addToName);
 
 		// show dialog
 		gd.showDialog();
@@ -451,7 +390,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		Gradthresh = (int) gd.getNextNumber();
 		// number of iterations
 		ite = (int) gd.getNextNumber();
-	
+
 		if (step > ite - 1) {
 			IJ.showStatus("Warning : show step too big\n\t step assignation 1");
 			step = 1;
@@ -491,10 +430,10 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		saverois = gd.getNextBoolean();
 		displaysnake = gd.getNextBoolean();
 		advanced = gd.getNextBoolean();
-		 
+
 		usefolder = gd.getNextString();
-		 addToName= gd.getNextString();
-		 
+		addToName = gd.getNextString();
+
 		return !gd.wasCanceled();
 	}
 
@@ -560,8 +499,6 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 
 		// start of computation
 		IJ.showStatus("Calculating snake...");
-
-		
 
 		double InvAlphaD = configDriver.getInvAlphaD(false);
 		double regMax = configDriver.getReg(false);
@@ -632,11 +569,10 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 
 	}
 
-	
-	public double[] getCenter(Roi roi){
+	public double[] getCenter(Roi roi) {
 
 		double Intensity = 0;
-		double[] center = new double[ 3 ];
+		double[] center = new double[3];
 		Cursor<FloatType> currentcursor = Views.iterable(source).localizingCursor();
 		double SumX = 0;
 		double SumY = 0;
@@ -659,37 +595,34 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 			}
 
 		}
-		center[ 0 ] = SumX / Intensity;
-		center[ 1 ] = SumY / Intensity;
-		
-		center[ 2 ] = 0;
-		
+		center[0] = SumX / Intensity;
+		center[1] = SumY / Intensity;
+
+		center[2] = 0;
+
 		return center;
-		
-		
-		
+
 	}
-	
+
 	public double[] getProps(Roi roi) {
 
-		// 3 co-ordinates for COM 1 for TotalIntensity, 1 for Number of pixels, I for Mean Intensity, 1 for Circularity = 7, Same for target image : , 8 TotalIntensitytarget, 
+		// 3 co-ordinates for COM 1 for TotalIntensity, 1 for Number of pixels,
+		// I for Mean Intensity, 1 for Circularity = 7, Same for target image :
+		// , 8 TotalIntensitytarget,
 		// 9 Mean Intensity target, 10 size of the Blob
-		double[] center = new double[ 11 ];
+		double[] center = new double[11];
 
 		double Intensity = 0;
 		double NumberofpixelsSource = 0;
 		double NumberofpixelsTarget = 0;
 		double IntensityTarget = 0;
-		
-		
-		
+
 		double SumX = 0;
 		double SumY = 0;
 		Cursor<FloatType> currentcursor = Views.iterable(source).localizingCursor();
 
-		
-		final double[] position = new double[ 2 ];
-		
+		final double[] position = new double[2];
+
 		while (currentcursor.hasNext()) {
 
 			currentcursor.fwd();
@@ -701,84 +634,62 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 
 			if (roi.contains(x, y)) {
 
-				
-				
 				NumberofpixelsSource++;
 				SumX += currentcursor.getDoublePosition(0) * currentcursor.get().getRealDouble();
 				SumY += currentcursor.getDoublePosition(1) * currentcursor.get().getRealDouble();
 				Intensity += currentcursor.get().getRealDouble();
-				
-				
-				
-				
+
 			}
 
 		}
-		center[ 0 ] = SumX / Intensity;
-		center[ 1 ] = SumY / Intensity;
-		
-		center[ 2 ] = 0;
-		
-		int width = (int)roi.getBounds().getWidth();
-		int height = (int)roi.getBounds().getHeight();
-		
-		final OvalRoi Bigroi = new OvalRoi(Util.round(center[0] -(width + sizeX)/2), Util.round(center[1] - (height + sizeY)/2 ), Util.round(width + sizeX),
-				Util.round(height + sizeY));
-		
-       Cursor<FloatType> secondcurrentcursor = Views.iterable(source).localizingCursor();
+		center[0] = SumX / Intensity;
+		center[1] = SumY / Intensity;
 
-		
-		final double[] secposition = new double[ 2 ];
+		center[2] = 0;
+
+		int width = (int) roi.getBounds().getWidth();
+		int height = (int) roi.getBounds().getHeight();
+
+		final OvalRoi Bigroi = new OvalRoi(Util.round(center[0] - (width + sizeX) / 2),
+				Util.round(center[1] - (height + sizeY) / 2), Util.round(width + sizeX), Util.round(height + sizeY));
+
+		Cursor<FloatType> secondcurrentcursor = Views.iterable(source).localizingCursor();
+
+		final double[] secposition = new double[2];
 		RandomAccess<FloatType> targetran = target.randomAccess();
-		
-		
-		while(secondcurrentcursor.hasNext()){
-			
+
+		while (secondcurrentcursor.hasNext()) {
+
 			secondcurrentcursor.fwd();
-			
+
 			secondcurrentcursor.localize(secposition);
-			
+
 			int x = (int) secposition[0];
 			int y = (int) secposition[1];
-			
-			
-			if (Bigroi.contains(x, y)){
-				
+
+			if (Bigroi.contains(x, y)) {
+
 				NumberofpixelsTarget++;
 				targetran.setPosition(secondcurrentcursor);
 				IntensityTarget += targetran.get().getRealDouble();
-				
+
 			}
-			
-			
-			
+
 		}
-		
-		
-		
-		
-		
-		center[ 3 ] = Intensity;
-		center[ 4 ] = NumberofpixelsSource;
-		center[ 5 ] = Intensity / NumberofpixelsSource;
+
+		center[3] = Intensity;
+		center[4] = NumberofpixelsSource;
+		center[5] = Intensity / NumberofpixelsSource;
 		final double perimeter = roi.getLength();
-		center[ 6 ] = 4 * Math.PI * NumberofpixelsSource / Math.pow(perimeter, 2);
-		center[ 7 ] = IntensityTarget;
-		center[ 8 ] = NumberofpixelsTarget;
-		center[ 9 ] = IntensityTarget / NumberofpixelsTarget;
-	    center[ 10 ] = roi.getCornerDiameter();
-		
-		
-		
+		center[6] = 4 * Math.PI * NumberofpixelsSource / Math.pow(perimeter, 2);
+		center[7] = IntensityTarget;
+		center[8] = NumberofpixelsTarget;
+		center[9] = IntensityTarget / NumberofpixelsTarget;
+		center[10] = roi.getCornerDiameter();
+
 		return center;
 
 	}
-	
-	
-	
-	
-	
-	
 
 	@Override
 	public String getErrorMessage() {
@@ -788,17 +699,16 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	@Override
 	public void setLogger(Logger logger) {
 		this.logger = logger;
-		
+
 	}
-	
-	
+
 	/** The name of the frame feature. */
-	public static final String SNAKEPROGRESS= "SNAKEPROGRESS";
-	
-	public final Double getFeature( final String feature )
-	{
-		return features.get( feature );
+	public static final String SNAKEPROGRESS = "SNAKEPROGRESS";
+
+	public final Double getFeature(final String feature) {
+		return features.get(feature);
 	}
+
 	/**
 	 * Stores the specified feature value for this spot.
 	 *
@@ -808,15 +718,10 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	 *            the value to store, as a {@link Double}. Using
 	 *            <code>null</code> will have unpredicted outcomes.
 	 */
-	public final void putFeature( final String feature, final Double value )
-	{
-		features.put( feature, value );
+	public final void putFeature(final String feature, final Double value) {
+		features.put(feature, value);
 	}
-	
-	
-	
-	
-	
+
 	public double sqDistance(final double[] cordone, final double[] cordtwo) {
 
 		double distance = 0;
@@ -828,91 +733,5 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		}
 		return (distance);
 	}
-	
-	
 
-		  
-	public  void go() {
-      
-       
-        jpb.setIndeterminate(false);
-      
-        jpb.setMaximum(max);
-        panel.add(label);
-        panel.add(jpb);
-        frame.add(panel);
-        frame.pack();
-        frame.setSize(200,90);
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
-       
-        Task_IntegerUpdate newtask = new Task_IntegerUpdate(jpb, max, label);
-		newtask.execute();
-      
-       
-	}
-        
-
-	
-	class Task_IntegerUpdate extends SwingWorker<Integer, Integer> {
-
-            JProgressBar jpb;
-            int max;
-            JLabel label;
-            public Task_IntegerUpdate(JProgressBar jpb, int max, JLabel label) {
-                this.jpb = jpb;
-                this.max = max;
-                this.label = label;
-            }
-            @Override
-            protected void process(List<Integer> chunks) {
-           
-            	 int i = chunks.get(chunks.size()-1);
-                 jpb.setValue(i); // The last value in this array is all we care about.
-                 label.setText("Progress" + i + " % of " + max);
-            	
-                }
-
-            @Override
-            protected Integer doInBackground() throws Exception {
-               
-            
-            	
-                    Thread.sleep(10); // Illustrating long-running code.
-                    publish((int) (percent));
-                    
-            	
-                    
-                    
-                return (int)percent;
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    get();
-                    label.setText("Progress " + percent + " % of " + max);
-                    //JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
-                } catch (ExecutionException | InterruptedException e) {
-                    e.printStackTrace();
-                }
-            
-        }
-            
-            
-            
-            
-    }
-
-        
-	}
-      
-	 	
-        
-        
-        
-       
-        
-
-
-
+}
