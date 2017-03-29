@@ -119,6 +119,7 @@ import net.imglib2.algorithm.componenttree.mser.MserTree;
 import net.imglib2.algorithm.dog.DogDetection;
 import net.imglib2.algorithm.localextrema.RefinedPeak;
 import net.imglib2.algorithm.stats.Normalize;
+import net.imglib2.converter.Converter;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.img.array.ArrayImgFactory;
@@ -129,6 +130,7 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.RealSum;
 import net.imglib2.view.Views;
+import net.imglib2.view.composite.NumericComposite;
 import overlaytrack.DisplayGraph;
 import preProcessing.GetLocalmaxmin;
 import segmentation.SegmentbyWatershed;
@@ -1877,16 +1879,19 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 					snakeoverlay = snake.getABsnake();
 
+				
+					
+					
 					if (snake.displaysnake) {
 
 						if (imp != null)
 							imp.close();
 						imp = ImageJFunctions.show(CurrentView);
-						
+						imp.hide();
 						if (measureimp != null)
 							measureimp.close();
 						measureimp = ImageJFunctions.show(otherCurrentView);
-						
+						measureimp.hide();
 						snakestack.addSlice(imp.getImageStack().getProcessor(z).convertToRGB());
 						measuresnakestack.addSlice(measureimp.getImageStack().getProcessor(z).convertToRGB());
 						
@@ -2084,10 +2089,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 					if (imp != null)
 						imp.close();
 					imp = ImageJFunctions.show(CurrentView);
+					imp.hide();
 					
 					if (measureimp != null)
 						measureimp.close();
 					measureimp = ImageJFunctions.show(otherCurrentView);
+					measureimp.hide();
 				
 					snakestack.addSlice(imp.getImageStack().getProcessor(z).convertToRGB());
 					measuresnakestack.addSlice(measureimp.getImageStack().getProcessor(z).convertToRGB());
@@ -2255,11 +2262,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 				if (imp != null)
 					imp.close();
 				imp = ImageJFunctions.show(CurrentView);
-				
+				imp.hide();
 				if (measureimp != null)
 					measureimp.close();
 				measureimp = ImageJFunctions.show(otherCurrentView);
-				
+				measureimp.hide();
 				snakestack.addSlice(imp.getImageStack().getProcessor(z).convertToRGB());
 				measuresnakestack.addSlice(measureimp.getImageStack().getProcessor(z).convertToRGB());
 				
