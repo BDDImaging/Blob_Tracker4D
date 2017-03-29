@@ -90,6 +90,7 @@ import ij.ImageStack;
 import ij.WindowManager;
 import ij.gui.EllipseRoi;
 import ij.gui.GenericDialog;
+import ij.gui.Line;
 import ij.gui.OvalRoi;
 import ij.gui.Overlay;
 import ij.gui.PolygonRoi;
@@ -132,6 +133,7 @@ import net.imglib2.util.RealSum;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.NumericComposite;
 import overlaytrack.DisplayGraph;
+import overlaytrack.DisplaymodelGraph;
 import preProcessing.GetLocalmaxmin;
 import segmentation.SegmentbyWatershed;
 import trackerType.BlobTracker;
@@ -197,6 +199,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 	float thresholdMin = 0f;
 	float thresholdMax = 1f;
 	int thresholdInit = 1;
+	float thresholdHoughMin = 0f;
+	float thresholdHoughMax = 1f;
+	int thresholdHoughInit = 1;
+	
 	float sizeX = 0;
 	float sizeY = 0;
 	public int radius = 1;
@@ -422,11 +428,39 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	}
 
+	public void setThresholdHough(final float value) {
+		thresholdHough = value;
+		thresholdHoughInit = computeScrollbarPositionFromValue(thresholdHough, thresholdHoughMin, thresholdHoughMax, scrollbarSize);
+	}
+
+	
+	
+	public double getThresholdHoughMin() {
+		return thresholdMin;
+	}
+
+	public double getThresholdHoughMax() {
+		return thresholdMax;
+	}
+
+	public void setthresholdHoughMax(final float thresholdHoughMax) {
+
+		this.thresholdHoughMax = thresholdHoughMax;
+
+	}
+
+	public void setthresholdHoughMin(final float thresholdHoughMin) {
+
+		this.thresholdHoughMin = thresholdHoughMin;
+
+	}
+
 	public void setThreshold(final float value) {
 		threshold = value;
 		thresholdInit = computeScrollbarPositionFromValue(threshold, thresholdMin, thresholdMax, scrollbarSize);
 	}
-
+	
+	
 	public void setTime(final int value) {
 		thirdDimensionslider = value;
 		thirdDimensionsliderInit = 1;
@@ -574,13 +608,25 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		threshold = minPeakValue;
 
-		thresholdMax = (float) (minPeakValue * 10);
+		thresholdMax = (float) (minPeakValue );
 
 		thresholdMin = (float) (0);
 
+		thresholdHough = minPeakValue;
+
+		thresholdHoughMax = (float) (minPeakValue/10 );
+
+		thresholdHoughMin = (float) (0);
+		
+
 		setthresholdMin(thresholdMin);
 		setthresholdMax(thresholdMax);
-		setThreshold(threshold);
+		setThreshold(threshold/40);
+		
+		setthresholdHoughMin(thresholdHoughMin);
+		setthresholdHoughMax(thresholdHoughMax);
+		setThresholdHough(thresholdHough/40);
+		
 		measureimp = ImageJFunctions.show(otherCurrentView);
 		measureimp.setTitle("CurrentView of Measurment image");
 		imp = ImageJFunctions.show(CurrentView);
@@ -991,17 +1037,14 @@ public class InteractiveActiveContour_ implements PlugIn {
 			final Float houghval = AutomaticThresholding(currentimg);
 
 			// Get local Minima in scale space to get Max rho-theta points
-			float minPeakValue = houghval;
 
-			threshold = minPeakValue;
+			threshold = (float) getThreshold();
 
-			thresholdMax = (float) (minPeakValue * 5);
+			thresholdMax = (float) getThresholdMax();
 
-			thresholdMin = (float) (0);
+			thresholdMin = (float) getThresholdMin();
 
-			setthresholdMin(thresholdMin);
-			setthresholdMax(thresholdMax);
-			setThreshold(threshold);
+			
 		}
 		
 		
@@ -1130,7 +1173,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		if (change == ValueChange.Segmentation) {
 
 			IJ.log("Doing watershedding on the distance transformed image ");
-
+			
 			RandomAccessibleInterval<BitType> bitimg = new ArrayImgFactory<BitType>().create(newimg, new BitType());
 			GetLocalmaxmin.ThresholdingBit(newimg, bitimg, thresholdHough);
 
@@ -1364,9 +1407,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 				// IJ.log("Determining the initial threshold for the image");
 				// thresholdHoughInit =
 				// GlobalThresholding.AutomaticThresholding(currentPreprocessedimg);
-				final Scrollbar thresholdS = new Scrollbar(Scrollbar.HORIZONTAL, thresholdInit, 10, 0,
+				final Scrollbar thresholdSHough = new Scrollbar(Scrollbar.HORIZONTAL, thresholdHoughInit, 10, 0,
 						10 + scrollbarSize);
-				threshold = computeValueFromScrollbarPosition(thresholdInit, thresholdMin, thresholdMax, scrollbarSize);
+				thresholdHough = computeValueFromScrollbarPosition(thresholdHoughInit, thresholdHoughMin, thresholdHoughMax, scrollbarSize);
 
 
 				final Checkbox displayBit = new Checkbox("Display Bitimage ", displayBitimg);
@@ -1393,7 +1436,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				panelSecond.add(thresholdText, c);
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(thresholdS, c);
+				panelSecond.add(thresholdSHough, c);
 
 
 				++c.gridy;
@@ -1408,8 +1451,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				panelSecond.add(Dowatershed, c);
 
 
-				thresholdS.addAdjustmentListener(new ThresholdListener(thresholdText, thresholdMin, thresholdMax));
-
+				thresholdSHough.addAdjustmentListener(new ThresholdHoughListener(thresholdText, thresholdHoughMin, thresholdHoughMax));
 			
 
 				displayBit.addItemListener(new ShowBitimgListener());
@@ -3327,7 +3369,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		
 		
 
-		Exit.addActionListener(new FinishedButtonListener(panelCont, true));
+		Exit.addActionListener(new FinishedButtonListener(Cardframe, true));
 		
 		Cardframe.add(panelCont, BorderLayout.CENTER);
 		Cardframe.add(control, BorderLayout.SOUTH);
@@ -3339,10 +3381,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	}
 	protected class FinishedButtonListener implements ActionListener {
-		final JPanel parent;
+		final JFrame parent;
 		final boolean cancel;
 
-		public FinishedButtonListener(JPanel parent, final boolean cancel) {
+		public FinishedButtonListener(JFrame parent, final boolean cancel) {
 			this.parent = parent;
 			this.cancel = cancel;
 		}
@@ -3354,14 +3396,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 		}
 	}
 	
-	protected final void close(final JPanel parent, final SliceObserver sliceObserver, RoiListener roiListener) {
+	protected final void close(final JFrame parent, final SliceObserver sliceObserver, RoiListener roiListener) {
 		if (parent != null)
-			System.exit(0);
+			parent.dispose();
 
-		if (sliceObserver != null)
-			sliceObserver.unregister();
-		if (roiListener != null)
-			imp.getCanvas().removeMouseListener(roiListener);
+	
 
 		isFinished = true;
 	}
@@ -3464,9 +3503,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 				// IJ.log("Determining the initial threshold for the image");
 				// thresholdHoughInit =
 				// GlobalThresholding.AutomaticThresholding(currentPreprocessedimg);
-				final Scrollbar thresholdS = new Scrollbar(Scrollbar.HORIZONTAL, thresholdInit, 10, 0,
+				final Scrollbar thresholdSHough = new Scrollbar(Scrollbar.HORIZONTAL, thresholdHoughInit, 10, 0,
 						10 + scrollbarSize);
-				threshold = computeValueFromScrollbarPosition(thresholdInit, thresholdMin, thresholdMax, scrollbarSize);
+				thresholdHough = computeValueFromScrollbarPosition(thresholdHoughInit, thresholdHoughMin, thresholdHoughMax, scrollbarSize);
 
 
 				final Checkbox displayBit = new Checkbox("Display Bitimage ", displayBitimg);
@@ -3500,7 +3539,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 0);
 				
-				panelSecond.add(thresholdS, c);
+				panelSecond.add(thresholdSHough, c);
 				++c.gridy;
 				
 				c.insets = new Insets(10, 175, 0, 175);
@@ -3514,7 +3553,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				panelSecond.add(Dowatershed, c);
 
 
-				thresholdS.addAdjustmentListener(new ThresholdListener(thresholdText, thresholdMin, thresholdMax));
+				thresholdSHough.addAdjustmentListener(new ThresholdHoughListener(thresholdText, thresholdHoughMin, thresholdHoughMax));
 
 			
 
@@ -4789,7 +4828,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			IJ.log("Tracking Complete " + " " + "Displaying results");
 
 			ImagePlus totalimp = ImageJFunctions.show(originalimgA);
-			DisplayGraph totaldisplaytracks = new DisplayGraph(totalimp, graph, colorDraw);
+			DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(totalimp, graph, colorDraw);
 			totaldisplaytracks.getImp();
 
 			TrackModel model = new TrackModel(graph);
@@ -4845,7 +4884,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 					NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
 					nf.setMaximumFractionDigits(3);
 					try {
-						File fichier = new File(usefolder + "//" + addTrackToName + "ID" + id + ".txt");
+						File fichier = new File(usefolder + "//" + addTrackToName + "TrackID" + id + ".txt");
 						FileWriter fw = new FileWriter(fichier);
 						BufferedWriter bw = new BufferedWriter(fw);
 
@@ -4887,7 +4926,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 					rt.addValue("Intensity Measureimage", list.get(index).IntensitySecROI);
 					rt.addValue("Number of Pixels Measureimage ", list.get(index).numberofPixelsSecRoI);
 					rt.addValue("Mean Intensity Measureimage ", list.get(index).meanIntensitySecROI);
+					Overlay o = totaldisplaytracks.getImp().getOverlay();
 
+				
 				
 
 				}
@@ -4896,29 +4937,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 					saveResultsToExcel(usefolder + "//" + addTrackToName + ".xls", rt);
 
 				
-				Overlay o = totalimp.getOverlay();
-
-				if (o == null) {
-					o = new Overlay();
-					totalimp.setOverlay(o);
-				}
-				
-				Roi newellipse = new Roi((int) list.get(0).centreofMass[0],
-						(int) list.get(0).centreofMass[1], totalimp);
 			
-
-				newellipse.setStrokeColor(inactiveColor);
-				newellipse.setStrokeWidth(1);
-				newellipse.setName("TrackID: " + id);
 				
-				o.add(newellipse);
-				o.drawLabels(true);
-				
-				o.drawNames(true);
 				
 			}
 			
-		
+			
 
 
 			rt.show("Results");
@@ -5178,6 +5202,32 @@ public class InteractiveActiveContour_ implements PlugIn {
 			}
 		}
 	}
+	
+	protected class ThresholdHoughListener implements AdjustmentListener {
+		final Label label;
+		final float min, max;
+
+		public ThresholdHoughListener(final Label label, final float min, final float max) {
+			this.label = label;
+			this.min = min;
+			this.max = max;
+		}
+
+		@Override
+		public void adjustmentValueChanged(final AdjustmentEvent event) {
+			thresholdHough = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
+			label.setText("Threshold = " + thresholdHough);
+
+			if (!isComputing) {
+				updatePreview(ValueChange.THRESHOLD);
+			} else if (!event.getValueIsAdjusting()) {
+				while (isComputing) {
+					SimpleMultiThreading.threadWait(10);
+				}
+				updatePreview(ValueChange.THRESHOLD);
+			}
+		}
+	}
 
 	protected class thirdDimensionsliderListener implements AdjustmentListener {
 		final Label label;
@@ -5322,15 +5372,15 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	public static void main(String args[]) {
 		
-		
+		// SpimData2 d = loadSpimData( new File(
+				// "/home/preibisch/Documents/Microscopy/SPIM/Drosophila
+				// MS2-GFP//dataset.xml" ) );
+				// getImg( d, 0, 50 );
+				// 3D mCherry-test.tif
+				// 4D one_division_4d-smallz.tif
 		
 		new ImageJ();
-		// SpimData2 d = loadSpimData( new File(
-		// "/home/preibisch/Documents/Microscopy/SPIM/Drosophila
-		// MS2-GFP//dataset.xml" ) );
-		// getImg( d, 0, 50 );
-		// 3D mCherry-test.tif
-		// 4D one_division_4d-smallz.tif
+		
 
 		JFrame frame = new JFrame("");
 		FileChooser panel = new FileChooser();

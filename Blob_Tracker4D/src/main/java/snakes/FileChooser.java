@@ -1,6 +1,7 @@
 package snakes;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import ij.ImagePlus;
 import ij.io.Opener;
@@ -91,7 +92,7 @@ public class FileChooser extends JPanel {
 		++c.gridy;
 		++c.gridy;
 		++c.gridy;
-		c.insets = new Insets(0, 170, 0, 75);
+		c.insets = new Insets(0, 170, 0, 300);
 		frame.add(Done, c);
 
 		Track.addActionListener(new UploadTrackListener(frame));
@@ -139,6 +140,9 @@ public class FileChooser extends JPanel {
 			// disable the "All files" option.
 			//
 			chooserA.setAcceptAllFileFilterUsed(false);
+			 FileNameExtensionFilter filter = new FileNameExtensionFilter("Image Files", "tif");
+				
+				chooserA.setFileFilter(filter);
 			//
 			if (chooserA.showOpenDialog(parent) == JFileChooser.APPROVE_OPTION) {
 				System.out.println("getCurrentDirectory(): " + chooserA.getCurrentDirectory());
@@ -174,6 +178,9 @@ public class FileChooser extends JPanel {
 			// disable the "All files" option.
 			//
 			chooserB.setAcceptAllFileFilterUsed(false);
+			 FileNameExtensionFilter filter = new FileNameExtensionFilter("Image Files", "tif");
+				
+				chooserB.setFileFilter(filter);
 			//
 			if (chooserB.showOpenDialog(parent) == JFileChooser.APPROVE_OPTION) {
 				System.out.println("getCurrentDirectory(): " + chooserB.getCurrentDirectory());

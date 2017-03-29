@@ -3,6 +3,9 @@ package overlaytrack;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -24,15 +27,16 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.real.FloatType;
 import snakes.SnakeObject;
+import trackerType.TrackModel;
 
-public class DisplayGraph {
+public class DisplaymodelGraph {
 	// add listener to the imageplus slice slider
 	private ImagePlus imp;
 	private final SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph;
 	private final int ndims;
 	final Color colorDraw;
 	
-	public DisplayGraph(final ImagePlus imp, SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph,
+	public DisplaymodelGraph(final ImagePlus imp, SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph,
 			Color colorDraw){
 		
 		this.imp = imp;
@@ -55,6 +59,8 @@ public class DisplayGraph {
 		{
 			
 			
+			TrackModel model = new TrackModel(graph);
+			model.getDirectedNeighborIndex();
 			imp.show();
 			Overlay o = imp.getOverlay();
 			
@@ -65,7 +71,67 @@ public class DisplayGraph {
 			}
 
 			o.clear();
-			getImp().getOverlay().clear(); 
+			getImp().getOverlay().clear();
+			
+			for (final Integer id : model.trackIDs(true)) {
+
+				// Get the corresponding set for each id
+				model.setName(id, "Track" + id);
+				final HashSet<SnakeObject> Snakeset = model.trackSnakeObjects(id);
+				ArrayList<SnakeObject> list = new ArrayList<SnakeObject>();
+
+				Comparator<SnakeObject> ThirdDimcomparison = new Comparator<SnakeObject>() {
+
+					@Override
+					public int compare(final SnakeObject A, final SnakeObject B) {
+
+						return A.thirdDimension - B.thirdDimension;
+
+					}
+
+				};
+
+				Comparator<SnakeObject> FourthDimcomparison = new Comparator<SnakeObject>() {
+
+					@Override
+					public int compare(final SnakeObject A, final SnakeObject B) {
+
+						return A.fourthDimension - B.fourthDimension;
+
+					}
+
+				};
+
+				Iterator<SnakeObject> Snakeiter = Snakeset.iterator();
+				while (Snakeiter.hasNext()) {
+
+					SnakeObject currentsnake = Snakeiter.next();
+
+					for (int d = 0; d < imp.getNDimensions(); ++d)
+						if (currentsnake.centreofMass[d] != Double.NaN)
+							list.add(currentsnake);
+
+				}
+				Collections.sort(list, ThirdDimcomparison);
+				if (imp.getNDimensions() > 3)
+					Collections.sort(list, FourthDimcomparison);
+				
+                Line newellipse = new Line(list.get(0).centreofMass[0], list.get(0).centreofMass[1], list.get(0).centreofMass[0], list.get(0).centreofMass[1]);
+				
+
+				newellipse.setStrokeColor(Color.WHITE);
+				newellipse.setStrokeWidth(1);
+				newellipse.setName("TrackID: " + id);
+				
+				o.add(newellipse);
+				o.drawLabels(true);
+				
+				o.drawNames(true);
+				
+			}
+			
+			
+			
 			for (DefaultWeightedEdge e : graph.edgeSet()) {
 				
 		        SnakeObject Spotbase = graph.getEdgeSource(e);
