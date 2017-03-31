@@ -118,7 +118,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	private final double sizeX;
 	private final double sizeY;
 	private int Roiindex;
-	static double percent = 0;
+	double percent = 0;
 
 	/**
 	 * Parametres of Snake :
@@ -131,12 +131,12 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	// threshold of edges
 	int Gradthresh = 2;
 	// how far to look for edges
-	int DistMAX = 100;
+	int DistMAX = 20;
 
 	double Displacement_min = 0.1;
 	double Displacement_max = 2.0;
-	double Threshold_dist_positive = 100;
-	double Threshold_dist_negative = 100;
+	double Threshold_dist_positive = 10;
+	double Threshold_dist_negative = 10;
 	double Inv_alpha_min = 0.2;
 	double Inv_alpha_max = 10.0;
 	double Reg_min = 1;
@@ -267,7 +267,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(source, type);
 		resultsource = factory.create(source, type);
 
-		if (advanced) {
+		if (advanced || thirdDimension == 1) {
 			IJ.log("Snake Parameters:" + " thirdDimension: " + " " + thirdDimension + " " + "fourthDimension: "
 					+ fourthDimension);
 			IJ.log(" Displacement_min " + " " + Displacement_min + " " + " Displacement_max" + " " + Displacement_max
@@ -283,21 +283,29 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		Roi roi;
 
 		currentimg = source;
-
+/*
 		// Expand the image by 10 pixels
 
 		Interval spaceinterval = Intervals.createMinMax(
 				new long[] { currentimg.min(0), currentimg.min(1), currentimg.max(0), currentimg.max(1) });
 		Interval interval = Intervals.expand(spaceinterval, 10);
 		currentimg = Views.interval(Views.extendBorder(currentimg), interval);
-
+*/
 		ABSnakeFast snake;
 
 		// Simulate doing something useful.
 		for (int i = 0; i < RoisOrig.size(); i++) {
-
+			percent = (Math.round(100 * (i + 1) / (nbRois)));
 			roi = RoisOrig.get(i);
-
+			if(roi.getPolygon().intersects(currentimg.min(0), currentimg.min(1) , 5, 5))
+				continue;
+			if(roi.getPolygon().intersects(currentimg.max(0), currentimg.max(1) , 5, 5))
+				continue;
+			if(roi.getPolygon().intersects(currentimg.min(0), currentimg.max(1) , 5, 5))
+				continue;
+			if(roi.getPolygon().intersects(currentimg.max(0), currentimg.min(1) , 5, 5))
+				continue;
+			
 			System.out.println("processing fourthDimension no. " + fourthDimension + " thirdDimension no. "
 					+ thirdDimension + " with roi " + i);
 
@@ -309,10 +317,40 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 			RoisResult[i].setName("res-" + i);
 			RoisCurrent[i] = snake.createRoi();
 
+		
 			snakelist.add(snake);
 
-			if (RoisResult[i] != null) {
+			if(snake.createRoi().getPolygon().intersects(currentimg.min(0), currentimg.min(1) , 5, 5)){
+				
+				snakelist.remove(snake);
+				
+			}
+			
+            if(snake.createRoi().getPolygon().intersects(currentimg.max(0), currentimg.max(1), 5 , 5)){
+				
+				snakelist.remove(snake);
+				
+			}
+            
 
+			if(snake.createRoi().getPolygon().intersects(currentimg.min(0), currentimg.max(1) , 5, 5)){
+				
+				snakelist.remove(snake);
+				
+			}
+			
+            if(snake.createRoi().getPolygon().intersects(currentimg.max(0), currentimg.min(1), 5 , 5)){
+				
+				snakelist.remove(snake);
+				
+			}
+			
+			if (RoisResult[i] != null ) {
+
+				
+				if (RoisResult[i].getBounds().getWidth() > 2 || RoisResult[i].getBounds().getHeight() > 2 ){
+			
+				
 				final double[] props = getProps(RoisResult[i]);
 				final double[] center = new double[] { props[0], props[1], props[2] };
 				final double Intensitysource = props[3];
@@ -323,6 +361,10 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 				final int NumberofpixelsTarget = (int) props[8];
 				final double MeanIntensitytarget = props[9];
 				final double Size = props[10];
+				
+				
+				
+				
 				finalrois.add(RoisResult[i]);
 
 				ComSnake csnake = new ComSnake(thirdDimension, fourthDimension, center, RoisResult[i]);
@@ -334,14 +376,13 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 				ProbBlobs.add(currentsnake);
 				putFeature(SNAKEPROGRESS, Double.valueOf(ProbBlobs.size()));
 
-				percent = (Math.round(100 * (i + 1) / (nbRois)));
+				
 
 				jpb.setValue((int) percent);
 				jpb.setOpaque(true);
 				jpb.setStringPainted(true);
-			//	jpb.setForeground(Color.YELLOW);
 				jpb.setString("3D point = " + thirdDimension + "/" + duration);
-				
+				}
 			}
 
 			if (saverois) {
@@ -513,6 +554,8 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 
 		double dist0 = 0.0;
 		double dist;
+		double olddist;
+		double term = 0;
 
 		for (i = 0; i < ite; i++) {
 			if (IJ.escapePressed()) {
@@ -521,6 +564,13 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 			// each iteration
 			dist = snake.process();
 
+			if (Math.abs(dist0 - dist) < 0.05){
+				
+				term++;
+			}
+			if (term > 10)
+				break;
+			
 			if ((dist >= dist0) && (dist < force)) {
 				// System.out.println("update " + config.getAlpha());
 				snake.computeGrad(currentimg);

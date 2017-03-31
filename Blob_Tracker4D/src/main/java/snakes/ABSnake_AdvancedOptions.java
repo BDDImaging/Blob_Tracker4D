@@ -11,7 +11,7 @@ package snakes;
 	        // dialog
 	    	 // dialog
 	        GenericDialog gd = new GenericDialog("Snake Advanced");
-	        gd.addNumericField("Distance_Search", 100, 0);
+	        gd.addNumericField("Distance_Search", 20, 0);
 	        gd.addNumericField("Displacement_min",  0.1, 2);
 	        gd.addNumericField("Displacement_max", 5.0 , 2);
 	        gd.addNumericField("Threshold_dist_positive", 100, 0);

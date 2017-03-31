@@ -2,9 +2,12 @@ package trackerType;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
 import net.imglib2.RealPoint;
 import snakes.SnakeObject;
 
@@ -30,12 +33,13 @@ public class KFsearch implements BlobTracker {
 
 	private static final String BASE_ERROR_MSG = "[KalmanTracker] ";
 
-	private final ArrayList<ArrayList<SnakeObject>> Allblobs;
+	private List<ArrayList<SnakeObject>> Allblobs;
 
 	private final double maxsearchRadius;
 	private final double initialsearchRadius;
 	private final CostFunction<SnakeObject, SnakeObject> UserchosenCostFunction;
 	private final int maxframe;
+	private int currentframe;
 	private final int maxframeGap;
 
 	private SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph;
@@ -44,17 +48,19 @@ public class KFsearch implements BlobTracker {
 
 	protected Logger logger = Logger.DEFAULT_LOGGER;
 	protected String errorMessage;
-
-	public KFsearch(final ArrayList<ArrayList<SnakeObject>> Allblobs,
+	ArrayList<ArrayList<SnakeObject>> Allblobscopy;
+	public KFsearch(final List<ArrayList<SnakeObject>> AllblobsA,
 			final CostFunction<SnakeObject, SnakeObject> UserchosenCostFunction, final double maxsearchRadius,
-			final double initialsearchRadius, final int maxframe, final int maxframeGap) {
-		this.Allblobs = Allblobs;
+			final double initialsearchRadius, final int currentframe, final int maxframe, final int maxframeGap) {
+		
+		this.Allblobs = Collections.unmodifiableList(AllblobsA);
 		this.UserchosenCostFunction = UserchosenCostFunction;
 		this.initialsearchRadius = initialsearchRadius;
 		this.maxsearchRadius = maxsearchRadius;
 		this.maxframe = maxframe;
+		this.currentframe = currentframe;
 		this.maxframeGap = maxframeGap;
-
+		
 	}
 
 	@Override
@@ -66,6 +72,12 @@ public class KFsearch implements BlobTracker {
 
 		return Allmeasured;
 	}
+	@Override
+	public ArrayList<ArrayList<SnakeObject>> getOriginallist(){
+		
+		return Allblobscopy;
+		
+	}
 
 	public ArrayList<Subgraphs> getFramedgraph() {
 
@@ -74,7 +86,12 @@ public class KFsearch implements BlobTracker {
 
 	@Override
 	public boolean checkInput() {
-		return true;
+		final StringBuilder errrorHolder = new StringBuilder();;
+		final boolean ok = checkInput();
+		if (!ok) {
+			errorMessage = errrorHolder.toString();
+		}
+		return ok;
 	}
 
 	@Override
@@ -83,7 +100,8 @@ public class KFsearch implements BlobTracker {
 		/*
 		 * Outputs
 		 */
-
+		
+		
 		graph = new SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge>(DefaultWeightedEdge.class);
 		Allmeasured = new ArrayList<FramedBlob>();
 		Framedgraph = new ArrayList<Subgraphs>();
@@ -91,7 +109,7 @@ public class KFsearch implements BlobTracker {
 		// Find first two non-zero frames containing blobs
 
 		int Firstframe = 0;
-		int Secondframe = 0;
+		int Secondframe = 1;
 
 		for (int frame = 0; frame < maxframe; ++frame) {
 
@@ -101,14 +119,14 @@ public class KFsearch implements BlobTracker {
 			}
 		}
 
-		for (int frame = Firstframe + 1; frame < maxframe; ++frame) {
+		for (int frame = Secondframe; frame < maxframe; ++frame) {
 
 			if (Allblobs.get(frame).size() > 0) {
 				Secondframe = frame;
 				break;
 			}
 		}
-
+		
 		Collection<SnakeObject> Firstorphan = Allblobs.get(Firstframe);
 
 		Collection<SnakeObject> Secondorphan = Allblobs.get(Secondframe);
@@ -127,38 +145,34 @@ public class KFsearch implements BlobTracker {
 		 * search radius, then the fluoctuations over predicted states are
 		 * large.
 		 */
-		final double positionProcessStd = maxsearchRadius / 3d;
-		final double velocityProcessStd = maxsearchRadius / 3d;
+		final double positionProcessStd = maxsearchRadius / 2d;
+		final double velocityProcessStd = maxsearchRadius / 2d;
 
 		
 		double meanSpotRadius = 0d;
 		for (final SnakeObject Blob : Secondorphan) {
 			
-			
-			
-			
-				if (Blob.roi!= null)
-			meanSpotRadius += Blob.roi.getLength() ;
-				else
 			meanSpotRadius += Blob.Size ;
-			
 		}
 		meanSpotRadius /= Secondorphan.size();
-		final double positionMeasurementStd = meanSpotRadius / 10d;
+		final double positionMeasurementStd = meanSpotRadius / 1d;
 
 		final Map<CVMKalmanFilter, SnakeObject> kalmanFiltersMap = new HashMap<CVMKalmanFilter, SnakeObject>(
 				Secondorphan.size());
-
+		
+		
 		// Loop from the second frame to the last frame and build
 		// KalmanFilterMap
-
-		for (int frame = Secondframe; frame < maxframe; frame++) {
+		
+		for (int frame = Secondframe; frame < maxframe; ++frame) {
 
 			SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> subgraph = new SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge>(
 					DefaultWeightedEdge.class);
 
-			List<SnakeObject> measurements = Allblobs.get(frame);
-
+			ArrayList<SnakeObject> measurements = Allblobs.get(frame);
+					
+			
+			
 			System.out.println("Doing KF search in frame number: " + frame + " " + "Number of blobs:"
 					+ Allblobs.get(frame).size());
 
@@ -219,12 +233,7 @@ public class KFsearch implements BlobTracker {
 					final DefaultWeightedEdge subedge = subgraph.addEdge(source, target);
 					subgraph.setEdgeWeight(subedge, cost);
 
-					Subgraphs currentframegraph = new Subgraphs(frame - 1, frame, subgraph);
-
-					Framedgraph.add(currentframegraph);
-					final FramedBlob prevframedBlob = new FramedBlob(frame - 1, source);
-
-					Allmeasured.add(prevframedBlob);
+					
 
 					final FramedBlob newframedBlob = new FramedBlob(frame, target);
 
@@ -243,7 +252,7 @@ public class KFsearch implements BlobTracker {
 					childlessKFs.remove(kf);
 				}
 			}
-
+			
 			// Deal with orphans from the previous frame.
 			// Here is the real linking with the actual cost function
 
@@ -269,7 +278,7 @@ public class KFsearch implements BlobTracker {
 					final SnakeObject target = newAssignments.get(source);
 
 					// Remove from orphan collection.
-					Secondorphan.remove(target);
+			
 
 					// Derive initial state and create Kalman filter.
 					final double[] XP = estimateInitialState(source, target);
@@ -279,26 +288,20 @@ public class KFsearch implements BlobTracker {
 
 					// Store filter and source
 					kalmanFiltersMap.put(kt, target);
-
+					synchronized (graph) {
 					// Add edge to the graph.
 					graph.addVertex(source);
 					graph.addVertex(target);
 					final DefaultWeightedEdge edge = graph.addEdge(source, target);
 					final double cost = assignmentCosts.get(source);
 					graph.setEdgeWeight(edge, cost);
-
+					
 					subgraph.addVertex(source);
 					subgraph.addVertex(target);
 					final DefaultWeightedEdge subedge = subgraph.addEdge(source, target);
 					subgraph.setEdgeWeight(subedge, cost);
-
-					Subgraphs currentframegraph = new Subgraphs(frame - 1, frame, subgraph);
-
-					Framedgraph.add(currentframegraph);
-
-					final FramedBlob prevframedBlob = new FramedBlob(frame - 1, source);
-
-					Allmeasured.add(prevframedBlob);
+					}
+				
 
 					final FramedBlob newframedBlob = new FramedBlob(frame, target);
 
@@ -306,7 +309,7 @@ public class KFsearch implements BlobTracker {
 
 				}
 			}
-
+			
 			Firstorphan = Secondorphan;
 			// Deal with childless KFs.
 			for (final CVMKalmanFilter kf : childlessKFs) {
@@ -320,24 +323,18 @@ public class KFsearch implements BlobTracker {
 				}
 			}
 
+			
+			
 		}
-
 		return true;
 	}
-
 	@Override
 	public void setLogger(final Logger logger) {
 		this.logger = logger;
 
 	}
-	@Override
-	public void reset() {
-		graph = new SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge>(DefaultWeightedEdge.class);
-		final Iterator<SnakeObject> it = Allblobs.get(0).iterator();
-		while (it.hasNext()) {
-			graph.addVertex(it.next());
-		}
-	}
+	
+	
 	@Override
 	public String getErrorMessage() {
 
@@ -365,7 +362,14 @@ public class KFsearch implements BlobTracker {
 			return hashCode() - o.hashCode();
 		}
 	}
-	
+         public void reset() {
+		
+		graph = new SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge>(DefaultWeightedEdge.class);
+		final Iterator<SnakeObject> it = Allblobs.get(0).iterator();
+		while (it.hasNext()) {
+			graph.addVertex(it.next());
+		}
+	}
 	
 
 	private static final double[] MeasureBlob(final SnakeObject target) {

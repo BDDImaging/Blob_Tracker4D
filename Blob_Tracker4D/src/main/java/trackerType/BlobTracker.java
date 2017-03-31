@@ -2,6 +2,8 @@ package trackerType;
 
 
 
+import java.util.ArrayList;
+
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.jgrapht.graph.SimpleWeightedGraph;
 
@@ -30,7 +32,9 @@ public interface BlobTracker extends OutputAlgorithm< SimpleWeightedGraph< Snake
 		 */
 		public void setLogger( final Logger logger );
 
-		public void reset();
+		ArrayList<ArrayList<SnakeObject>> getOriginallist();
+
+		
 	}
 	
 

@@ -92,7 +92,7 @@ public class FileChooser extends JPanel {
 		++c.gridy;
 		++c.gridy;
 		++c.gridy;
-		c.insets = new Insets(0, 170, 0, 300);
+		c.insets = new Insets(0, 170, 0, 75);
 		frame.add(Done, c);
 
 		Track.addActionListener(new UploadTrackListener(frame));

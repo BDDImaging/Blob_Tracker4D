@@ -323,6 +323,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	RandomAccessibleInterval<IntType> intimg;
 	ArrayList<ArrayList<SnakeObject>> AllSliceSnakes;
 	ArrayList<ArrayList<SnakeObject>> All3DSnakes;
+	ArrayList<ArrayList<SnakeObject>> All3DSnakescopy;
 	private ArrayList<SnakeObject> ProbBlobs;
 	boolean displayBitimg = false;
 	boolean displayWatershedimg = false;
@@ -634,6 +635,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		
 		
 		All3DSnakes = new ArrayList<ArrayList<SnakeObject>>();
+		All3DSnakescopy = new ArrayList<ArrayList<SnakeObject>>();
 		Rois = new ArrayList<Roi>();
 		NearestNeighbourRois = new ArrayList<Roi>();
 		SnakeRoisA = new ArrayList<Roi>();
@@ -818,12 +820,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				for (int index = 0; index < finalRois.size(); ++index) {
 
-					int width = (int) finalRois.get(index).rois.getBounds().getWidth();
-					int height = (int) finalRois.get(index).rois.getBounds().getHeight();
 
-					final OvalRoi or = new OvalRoi(Util.round(finalRois.get(index).com[0] - (width + sizeX) / 2),
-							Util.round(finalRois.get(index).com[1] - (height + sizeY) / 2), Util.round(width + sizeX),
-							Util.round(height + sizeY));
+					final Roi or = util.Boundingboxes.CreateBigRoi((PolygonRoi)finalRois.get(index).rois, othercurrentimg, sizeX, sizeY);
 
 					or.setStrokeColor(Color.red);
 					overlaymeasure.add(or);
@@ -1842,6 +1840,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			
 			All3DSnakes.clear();
+			All3DSnakescopy.clear();
 			Dialoguesec();
 			int next = thirdDimension;
 			int nextZ = fourthDimension;
@@ -1938,21 +1937,18 @@ public class InteractiveActiveContour_ implements PlugIn {
 						measuresnakestack.addSlice(measureimp.getImageStack().getProcessor(z).convertToRGB());
 						
 						ColorProcessor cp = (ColorProcessor) (snakestack.getProcessor(z).duplicate());
-						ColorProcessor measurecp = (ColorProcessor) (snakestack.getProcessor(z).duplicate());
+						ColorProcessor measurecp = (ColorProcessor) (measuresnakestack.getProcessor(z).duplicate());
 						
 						for (int i = 0; i < snakeoverlay.size(); ++i) {
 
 							snakeoverlay.get(i).DrawSnake(cp, snake.colorDraw, 1);
 							
-							double[] center = getCenter(snakeoverlay.get(i).createRoi());
 							
-							 Roi normalroi = snakeoverlay.get(i).createRoi();
+							Roi normalroi = snakeoverlay.get(i).createRoi();
+							
+						
 								
-								int width = (int)normalroi.getBounds().getWidth();
-								int height = (int)normalroi.getBounds().getHeight();
-								
-								final OvalRoi Bigroi = new OvalRoi(Util.round(center[0] -(width + sizeX)/2), Util.round(center[1] - (height + sizeY)/2 ), Util.round(width + sizeX),
-										Util.round(height + sizeY));
+								final Roi	Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, currentimg, sizeX, sizeY);
 								measurecp.setColor(colorDraw);
 								measurecp.setLineWidth(1);
 								measurecp.draw(Bigroi);
@@ -1975,6 +1971,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 							if (SnakeThirdDim == thirdDimension && SnakeFourthDim == fourthDimension) {
 								All3DSnakes.remove(Listindex);
+								All3DSnakescopy.remove(Listindex);
 								IJ.log(" Recomputing snakes for currentView");
 
 							}
@@ -1991,7 +1988,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				ArrayList<SnakeObject> ThreedimensionalSnake = getCentreofMass3D();
 
 				All3DSnakes.add(ThreedimensionalSnake);
-
+				All3DSnakescopy.add(ThreedimensionalSnake);
 				new ImagePlus("Snakes", snakestack).draw();
 				new ImagePlus("Measure", measuresnakestack).draw();
 			} // t loop closing
@@ -2075,6 +2072,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
 
 			All3DSnakes.clear();
+			All3DSnakescopy.clear();
 			int next = thirdDimension;
 
 			if (snakestack != null) {
@@ -2151,12 +2149,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 						
 						
 						 Roi normalroi = snakeoverlay.get(i).createRoi();
-						 double[] center = getCenter(normalroi);
-							int width = (int)normalroi.getBounds().getWidth();
-							int height = (int)normalroi.getBounds().getHeight();
-							
-							final OvalRoi Bigroi = new OvalRoi(Util.round(center[0] -(width + sizeX)/2), Util.round(center[1] - (height + sizeY)/2 ), Util.round(width + sizeX),
-									Util.round(height + sizeY));
+						
+							final Roi	Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, currentimg, sizeX, sizeY);
 							measurecp.setColor(colorDraw);
 							measurecp.setLineWidth(1);
 							measurecp.draw(Bigroi);
@@ -2177,6 +2171,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 						if (SnakeThirdDim == thirdDimension && SnakeFourthDim == fourthDimension) {
 							All3DSnakes.remove(Listindex);
+							All3DSnakescopy.remove(Listindex);
 							IJ.log(" Recomputing snakes for currentView");
 
 						}
@@ -2189,6 +2184,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			}
 
 			All3DSnakes.addAll(AllSliceSnakes);
+			All3DSnakescopy.addAll(AllSliceSnakes);
 			new ImagePlus("Snakes", snakestack).show();
 			new ImagePlus("Measure", measuresnakestack).show();
 			IJ.log("SnakeList Size" + All3DSnakes.size());
@@ -2272,6 +2268,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
 
 			All3DSnakes.clear();
+			All3DSnakescopy.clear();
 			DialogueRedo();
 
 			thirdDimensionslider = thirdDimension;
@@ -2289,7 +2286,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
 						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb, thirdDimensionSize);
 
-
+			
 			
 			snake.process();
 		          
@@ -2313,20 +2310,16 @@ public class InteractiveActiveContour_ implements PlugIn {
 				measuresnakestack.addSlice(measureimp.getImageStack().getProcessor(z).convertToRGB());
 				
 				ColorProcessor cp = (ColorProcessor) (snakestack.getProcessor(z).duplicate());
-				ColorProcessor measurecp = (ColorProcessor) (snakestack.getProcessor(z).duplicate());
+				ColorProcessor measurecp = (ColorProcessor) (measuresnakestack.getProcessor(z).duplicate());
 				
 				for (int i = 0; i < snakeoverlay.size(); ++i) {
 
 					snakeoverlay.get(i).DrawSnake(cp, snake.colorDraw, 1);
 
-					double[] center = getCenter(snakeoverlay.get(i).createRoi());
 	                Roi normalroi = snakeoverlay.get(i).createRoi();
 					
-					int width = (int)normalroi.getBounds().getWidth();
-					int height = (int)normalroi.getBounds().getHeight();
-					
-					final OvalRoi Bigroi = new OvalRoi(Util.round(center[0] -(width + sizeX)/2), Util.round(center[1] - (height + sizeY)/2 ), Util.round(width + sizeX),
-							Util.round(height + sizeY));
+				
+					final Roi	Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, currentimg, sizeX, sizeY);
 					measurecp.setColor(colorDraw);
 					measurecp.setLineWidth(1);
 					measurecp.draw(Bigroi);
@@ -2347,6 +2340,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 					if (SnakeThirdDim == thirdDimension && SnakeFourthDim == fourthDimension) {
 						All3DSnakes.remove(Listindex);
+						All3DSnakescopy.remove(Listindex);
 						IJ.log(" Recomputing snakes for currentView");
 
 					}
@@ -2357,6 +2351,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			AllSliceSnakes.add(currentsnakes);
 
 			All3DSnakes.addAll(AllSliceSnakes);
+			All3DSnakescopy.addAll(AllSliceSnakes);
 			new ImagePlus("Snakes", snakestack).show();
 			new ImagePlus("Measure", measuresnakestack).show();
 			snakestack.deleteLastSlice();
@@ -2473,15 +2468,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 				for (int i = 0; i < snakeoverlay.size(); ++i) {
 
 					snakeoverlay.get(i).DrawSnake(cp, snake.colorDraw, 1);
-					double[] center = getCenter(snakeoverlay.get(i).createRoi());
 					
 					Roi normalroi = snakeoverlay.get(i).createRoi();
 					
-					int width = (int)normalroi.getBounds().getWidth();
-					int height = (int)normalroi.getBounds().getHeight();
 					
-					final OvalRoi Bigroi = new OvalRoi(Util.round(center[0] -(width + sizeX)/2), Util.round(center[1] - (height + sizeY)/2 ), Util.round(width + sizeX),
-							Util.round(height + sizeY));
+					final Roi	Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, currentimg, sizeX, sizeY);
 					measurecp.setColor(colorDraw);
 					measurecp.setLineWidth(1);
 					measurecp.draw(Bigroi);
@@ -2505,6 +2496,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 					if (SnakeThirdDim == thirdDimension && SnakeFourthDim == fourthDimension) {
 						All3DSnakes.remove(Listindex);
+						All3DSnakescopy.remove(Listindex);
 						IJ.log(" Recomputing snakes for currentView");
 
 					}
@@ -2520,6 +2512,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			ArrayList<SnakeObject> ThreedimensionalSnake = getCentreofMass3D();
 
 			All3DSnakes.add(ThreedimensionalSnake);
+			All3DSnakescopy.add(ThreedimensionalSnake);
 			new ImagePlus("Snakes", snakestack).show();
 			snakestack.deleteLastSlice();
 			measuresnakestack.deleteLastSlice();
@@ -2774,12 +2767,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 						Roi roi = list.get(index).roi;
 
-						int width = (int) roi.getFloatPolygon().getBounds().getWidth();
-						int height = (int) roi.getFloatPolygon().getBounds().getHeight();
-
-						final OvalRoi Bigroi = new OvalRoi(Util.round(centerA[0] - (width + sizeX) / 2),
-								Util.round(centerA[1] - (height + sizeY) / 2), Util.round(width + sizeX),
-								Util.round(height + sizeY));
+						
+						final Roi Bigroi = util.Boundingboxes.CreateBigRoi(roi, othercurrentimg, sizeX, sizeY);
 
 						if (Bigroi.contains(x, y)) {
 
@@ -3399,8 +3388,15 @@ public class InteractiveActiveContour_ implements PlugIn {
 	protected final void close(final JFrame parent, final SliceObserver sliceObserver, RoiListener roiListener) {
 		if (parent != null)
 			parent.dispose();
-
-	
+		if (sliceObserver != null)
+			sliceObserver.unregister();
+		if (imp != null) {
+			if (roiListener != null)
+				imp.getCanvas().removeMouseListener(roiListener);
+			if (imp.getOverlay() != null) {
+				imp.getOverlay().clear();
+			}
+		}
 
 		isFinished = true;
 	}
@@ -3818,6 +3814,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 						new maxSearchradiusListener(MaxMovText, maxSearchradiusMin, maxSearchradiusMax));
 
 				track.addActionListener(new TrackerButtonListener());
+				
 
 			}
 
@@ -4788,11 +4785,19 @@ public class InteractiveActiveContour_ implements PlugIn {
 		return ellipse;
 	}
 
+	public void reset3D(final int third){
+		
+		thirdDimension = third;
+	}
+	
+    public void reset4D(final int fourth){
+		
+		fourthDimension = fourth;
+	}
+	
 	protected class TrackerButtonListener implements ActionListener {
 
-		public TrackerButtonListener() {
-
-		}
+		
 
 		public void actionPerformed(final ActionEvent arg0) {
 
@@ -4801,8 +4806,13 @@ public class InteractiveActiveContour_ implements PlugIn {
 			// impcopy = ImageJFunctions.show(originalimg);
 
 			UserchosenCostFunction = new PixelratiowDistCostFunction(alpha, beta);
+			ArrayList<ArrayList<SnakeObject>> All3DSnakesA = new ArrayList<ArrayList<SnakeObject>>();
+			
 			if (showKalman){
-				blobtracker = new KFsearch(All3DSnakes, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+				
+				
+				
+				blobtracker = new KFsearch(Collections.unmodifiableList(All3DSnakes), UserchosenCostFunction, maxSearchradius, initialSearchradius, thirdDimension,
 						thirdDimensionSize, missedframes);
 				
 				IJ.log("Kalman Filter parameters : ");
@@ -4810,7 +4820,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				IJ.log(" initialSearchradius " + "  " + initialSearchradius + " " + " missedframes " + " " + missedframes);	
 			}
 			if (showNN){
-				blobtracker = new NNsearch(All3DSnakes, maxSearchradius, thirdDimensionSize);
+				blobtracker = new NNsearch(All3DSnakes, maxSearchradius, thirdDimension, thirdDimensionSize);
 				IJ.log("Kalman Filter parameters : ");
 				IJ.log("maxSearchradius " + " " + maxSearchradius);
 				
@@ -4819,19 +4829,32 @@ public class InteractiveActiveContour_ implements PlugIn {
 			
 			
 			
-			blobtracker.reset();
+			
+			
+			
+			
 
+			for (int frame = 0; frame < thirdDimensionSize; ++frame )
+				System.out.println("A " + All3DSnakescopy.get(frame).size());
+			
 			blobtracker.process();
 
 			SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph = blobtracker.getResult();
-
+			
+			
+			
+			for (int frame = 0; frame < thirdDimensionSize; ++frame )
+				System.out.println("A " + All3DSnakescopy.get(frame).size());
+			
 			IJ.log("Tracking Complete " + " " + "Displaying results");
 
 			ImagePlus totalimp = ImageJFunctions.show(originalimgA);
+			
 			DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(totalimp, graph, colorDraw);
 			totaldisplaytracks.getImp();
 
 			TrackModel model = new TrackModel(graph);
+			
 			model.getDirectedNeighborIndex();
 			ResultsTable rt = new ResultsTable();
 			// Get all the track id's
@@ -4840,6 +4863,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 				// Get the corresponding set for each id
 				model.setName(id, "Track" + id);
 				final HashSet<SnakeObject> Snakeset = model.trackSnakeObjects(id);
+				
+				
 				ArrayList<SnakeObject> list = new ArrayList<SnakeObject>();
 
 				Comparator<SnakeObject> ThirdDimcomparison = new Comparator<SnakeObject>() {
@@ -4870,13 +4895,13 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 					SnakeObject currentsnake = Snakeiter.next();
 
-					for (int d = 0; d < currentimg.numDimensions(); ++d)
-						if (currentsnake.centreofMass[d] != Double.NaN)
+					
+						
 							list.add(currentsnake);
 
 				}
 				Collections.sort(list, ThirdDimcomparison);
-				if (fourthDimensionSize > 0)
+				if (fourthDimensionSize > 1)
 					Collections.sort(list, FourthDimcomparison);
 				// Write tracks with same track id to file
 				if (SaveTxt) {
@@ -4943,10 +4968,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 			}
 			
 			
-
-
+           
 			rt.show("Results");
 
+			
 		}
 
 	}

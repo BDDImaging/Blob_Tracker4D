@@ -3,6 +3,8 @@ package util;
 import java.util.ArrayList;
 
 import ij.gui.EllipseRoi;
+import ij.gui.OvalRoi;
+import ij.gui.PolygonRoi;
 import ij.gui.Roi;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
@@ -53,7 +55,63 @@ public class Boundingboxes {
 		return maxVal;
 
 	}
+	
+	public static Roi CreateBigRoi (final Roi currentroi, final RandomAccessibleInterval<FloatType> currentimg, final double sizeX, final double sizeY){
+		
+		
+		
+		double width = currentroi.getFloatWidth();
+		double height = currentroi.getFloatHeight();
+		
+		double[] center = getCenter(currentroi, currentimg);
+		
+	
+			Roi Bigroi = new OvalRoi(Util.round(center[0] -(width + sizeX)/2), Util.round(center[1] - (height + sizeY)/2 ), Util.round(width + sizeX),
+					Util.round(height + sizeY));
+			
+		      if(sizeX == 0 && sizeY == 0)
+		    	  Bigroi = currentroi;
+			
+		        
+		        return Bigroi;
+		
+		
+	}
+	
+	public static double[] getCenter(Roi roi, final RandomAccessibleInterval<FloatType> source) {
 
+		double Intensity = 0;
+		double[] center = new double[3];
+		Cursor<FloatType> currentcursor = Views.iterable(source).localizingCursor();
+		double SumX = 0;
+		double SumY = 0;
+		final double[] position = new double[source.numDimensions()];
+		int count = 0;
+		while (currentcursor.hasNext()) {
+
+			currentcursor.fwd();
+
+			currentcursor.localize(position);
+
+			int x = (int) position[0];
+			int y = (int) position[1];
+
+			if (roi.contains(x, y)) {
+				SumX += currentcursor.getDoublePosition(0) * currentcursor.get().getRealDouble();
+				SumY += currentcursor.getDoublePosition(1) * currentcursor.get().getRealDouble();
+				Intensity += currentcursor.get().getRealDouble();
+                 count++;
+			}
+
+		}
+		center[0] = SumX / Intensity;
+		center[1] = SumY / Intensity;
+
+		center[2] = 0;
+
+		return center;
+
+	}
 	public static long[] GetMincorners(RandomAccessibleInterval<IntType> inputimg, int label) {
 
 		Cursor<IntType> intCursor = Views.iterable(inputimg).localizingCursor();

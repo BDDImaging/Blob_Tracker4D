@@ -18,21 +18,27 @@ public class NNsearch implements BlobTracker {
 	private final ArrayList<ArrayList<SnakeObject>> Allblobs;
 	private final double maxdistance;
 	private final long maxframe;
+	private int currentframe;
 	private SimpleWeightedGraph< SnakeObject, DefaultWeightedEdge > graph;
 	protected Logger logger = Logger.DEFAULT_LOGGER;
 	protected String errorMessage;
 
 	public NNsearch(
-			final ArrayList<ArrayList<SnakeObject>> Allblobs, final double maxdistance, 
+			final ArrayList<ArrayList<SnakeObject>> Allblobs, final double maxdistance, final int currentframe,
 			final long maxframe){
 		this.Allblobs = Allblobs;
 		this.maxdistance = maxdistance;
 		this.maxframe = maxframe;
+		this.currentframe = currentframe;
 		
 		
 	}
-	
-	
+	@Override
+    public ArrayList<ArrayList<SnakeObject>> getOriginallist(){
+		
+		return Allblobs;
+		
+	}
 	
 	
 
@@ -139,7 +145,7 @@ public class NNsearch implements BlobTracker {
 		return ok;
 	}
 	
-	@Override
+
 	public void reset() {
 		
 		graph = new SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge>(DefaultWeightedEdge.class);

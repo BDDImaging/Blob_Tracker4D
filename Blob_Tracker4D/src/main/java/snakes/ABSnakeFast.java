@@ -164,6 +164,7 @@ public class ABSnakeFast {
 		int yy;
 		A.setColor(col);
 		A.setLineWidth(linewidth);
+		
 		for (i = 0; i < NPT - 1; i++) {
 			x = (int) (points[i].x);
 			y = (int) (points[i].y);

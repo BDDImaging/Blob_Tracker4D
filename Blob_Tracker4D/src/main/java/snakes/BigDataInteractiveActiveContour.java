@@ -115,6 +115,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.RealSum;
 import net.imglib2.view.Views;
 import overlaytrack.DisplayGraph;
+import snakes.InteractiveActiveContour_.thirdDimensionsliderListener;
 import spim.process.fusion.FusionHelper;
 import trackerType.BlobTracker;
 import trackerType.KFsearch;
@@ -558,12 +559,12 @@ public class BigDataInteractiveActiveContour implements PlugIn {
 			
 			
 			
-			blobtracker = new KFsearch(All3DSnakes, UserchosenCostFunction, maxSearchradius, initialSearchradius,
+			blobtracker = new KFsearch(All3DSnakes, UserchosenCostFunction, maxSearchradius, initialSearchradius, currentframe,
 					totalframes, missedframes);
 		}
 
 		if (trackertype == 1)
-			blobtracker = new NNsearch(All3DSnakes, maxSearchradius, totalframes);
+			blobtracker = new NNsearch(All3DSnakes, maxSearchradius, currentframe, totalframes);
 		
 		
 		gd.showDialog();
