@@ -3,6 +3,7 @@ package snakes;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import ij.IJ;
 import ij.ImagePlus;
 import ij.io.Opener;
 import net.imglib2.RandomAccessibleInterval;
@@ -211,11 +212,11 @@ public class FileChooser extends JPanel {
 
 			// Tracking is done with imageA measurment is performed on both the
 			// images
-
+           
 			    
 			RandomAccessibleInterval<FloatType> originalimgA = ImageJFunctions.convertFloat(impA);
 			RandomAccessibleInterval<FloatType> originalimgB = ImageJFunctions.convertFloat(impB);
-			//ImageJFunctions.show(originalimgA);
+			
 			new InteractiveActiveContour_(originalimgA, originalimgB).run(null);
 			close(parent);
 		}

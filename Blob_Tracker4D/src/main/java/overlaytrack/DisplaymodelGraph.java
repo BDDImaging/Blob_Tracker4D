@@ -35,14 +35,18 @@ public class DisplaymodelGraph {
 	private final SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph;
 	private final int ndims;
 	final Color colorDraw;
+	final boolean displayAll;
+	final int displayindex;
 	
 	public DisplaymodelGraph(final ImagePlus imp, SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph,
-			Color colorDraw){
+			Color colorDraw, boolean displayAll, int displayindex){
 		
 		this.imp = imp;
 		this.graph = graph;
 		this.colorDraw = colorDraw;
 		ndims = imp.getNDimensions();
+		this.displayAll = displayAll;
+		this.displayindex = displayindex;
 		
 		// add listener to the imageplus slice slider
 				SliceObserver sliceObserver = new SliceObserver( imp, new ImagePlusListener() );
@@ -61,6 +65,7 @@ public class DisplaymodelGraph {
 			
 			TrackModel model = new TrackModel(graph);
 			model.getDirectedNeighborIndex();
+			
 			imp.show();
 			Overlay o = imp.getOverlay();
 			
@@ -72,6 +77,7 @@ public class DisplaymodelGraph {
 
 			o.clear();
 			getImp().getOverlay().clear();
+			
 			
 			for (final Integer id : model.trackIDs(true)) {
 
@@ -116,6 +122,27 @@ public class DisplaymodelGraph {
 				if (imp.getNDimensions() > 3)
 					Collections.sort(list, FourthDimcomparison);
 				
+				
+				for (DefaultWeightedEdge e : model.edgeSet()) {
+					
+			        SnakeObject Spotbase = model.getEdgeSource(e);
+			        SnakeObject Spottarget = model.getEdgeTarget(e);
+			        
+			        
+			       
+			        final double[] startedge = new double[ndims];
+			        final double[] targetedge = new double[ndims];
+			        for (int d = 0; d < ndims - 1; ++d){
+			        	
+			        	startedge[d] = Spotbase.centreofMass[d];
+			        	
+			        	targetedge[d] = Spottarget.centreofMass[d];
+			        	
+			        }
+			        
+				
+				if (displayAll){
+				
                 Line newellipse = new Line(list.get(0).centreofMass[0], list.get(0).centreofMass[1], list.get(0).centreofMass[0], list.get(0).centreofMass[1]);
 				
 
@@ -128,29 +155,8 @@ public class DisplaymodelGraph {
 				
 				o.drawNames(true);
 				
-			}
-			
-			
-			
-			for (DefaultWeightedEdge e : graph.edgeSet()) {
 				
-		        SnakeObject Spotbase = graph.getEdgeSource(e);
-		        SnakeObject Spottarget = graph.getEdgeTarget(e);
-		        
-		        
-		        
-		        final double[] startedge = new double[ndims];
-		        final double[] targetedge = new double[ndims];
-		        for (int d = 0; d < ndims - 1; ++d){
-		        	
-		        	startedge[d] = Spotbase.centreofMass[d];
-		        	
-		        	targetedge[d] = Spottarget.centreofMass[d];
-		        	
-		        }
-		        
-		        
-		        
+				  
 		        Line newline = new Line(startedge[0], startedge[1], targetedge[0], targetedge[1]);
 				newline.setStrokeColor(colorDraw);
 				newline.setStrokeWidth(graph.degreeOf(Spottarget));
@@ -158,13 +164,45 @@ public class DisplaymodelGraph {
 			
 				o.add(newline);
 				
+				}
 				
-				
+				else{
+					
+					
+						if (id == displayindex - 1){
+						  Line newellipse = new Line(list.get(0).centreofMass[0], list.get(0).centreofMass[1], list.get(0).centreofMass[0], list.get(0).centreofMass[1]);
+							
+
+							newellipse.setStrokeColor(Color.WHITE);
+							newellipse.setStrokeWidth(1);
+							newellipse.setName("TrackID: " + id);
+							
+							o.add(newellipse);
+							o.drawLabels(true);
+							
+							o.drawNames(true);
+						}
+							if ( model.trackIDOf(Spotbase) == displayindex - 1){
+							  
+					        Line newline = new Line(startedge[0], startedge[1], targetedge[0], targetedge[1]);
+							newline.setStrokeColor(colorDraw);
+							newline.setStrokeWidth(graph.degreeOf(Spottarget));
+
+						
+							o.add(newline);
+						
+					}
+					
+					
+					
+					
+				}
 				
 				
 			}
+			
+			}
 			imp.updateAndDraw();
-			System.out.println( arg0.getCurrentSlice() );
 		}		
 	}
 	

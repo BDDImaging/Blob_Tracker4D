@@ -75,6 +75,7 @@ public class DisplayGraph {
 		        
 		        final double[] startedge = new double[ndims];
 		        final double[] targetedge = new double[ndims];
+		        
 		        for (int d = 0; d < ndims - 1; ++d){
 		        	
 		        	startedge[d] = Spotbase.centreofMass[d];
@@ -98,7 +99,6 @@ public class DisplayGraph {
 				
 			}
 			imp.updateAndDraw();
-			System.out.println( arg0.getCurrentSlice() );
 		}		
 	}
 	

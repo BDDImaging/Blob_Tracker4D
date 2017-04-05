@@ -48,6 +48,7 @@ import java.util.logging.Logger;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -162,7 +163,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	int sensitivity = standardSensitivity;
 	JLabel label = new JLabel("Progress..");
 	JProgressBar jpb;
-
+	SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph;
 	JFrame frame = new JFrame();
 	JPanel panel = new JPanel();
 	float imageSigma = 0.5f;
@@ -175,6 +176,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 	float sizeYMax = 100f;
 	int sigmaInit = 30;
 
+	int displaySelectedTrack;
+	ArrayList<Integer> IDALL = new ArrayList<Integer>();
 	float minDiversityMin = 0;
 	float minDiversityMax = 1;
 	int thirdDimensionslider = 0;
@@ -1216,7 +1219,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			SegmentbyWatershed<UnsignedByteType> WaterafterDisttransform = new SegmentbyWatershed<UnsignedByteType>(
 					newimg, bitimg);
 			WaterafterDisttransform.checkInput();
-				WaterafterDisttransform.process();
+			WaterafterDisttransform.process();
 			intimg = WaterafterDisttransform.getResult();
 			Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
 			if (displayWatershedimg)
@@ -3261,22 +3264,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 		Ends.setForeground(new Color(255, 255, 255));
 		Ends.setBackground(new Color(1, 0, 1));
 
-		panelSeventh.setLayout(layout);
-		final Label Done = new Label("Hope that everything was to your satisfaction!");
-		final Button Exit = new Button("Close and exit");
-
-		Done.setBackground(new Color(1, 0, 1));
-		Done.setForeground(new Color(255, 255, 255));
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelSeventh.add(Done, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelSeventh.add(Exit, c);
-
-		Exit.addActionListener(new FinishedButtonListener(Cardframe, true));
-
 		Cardframe.add(panelCont, BorderLayout.CENTER);
 		Cardframe.add(control, BorderLayout.SOUTH);
 		Cardframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -3284,6 +3271,64 @@ public class InteractiveActiveContour_ implements PlugIn {
 		Cardframe.setResizable(true);
 		Cardframe.setVisible(true);
 		Cardframe.pack();
+
+	}
+
+	public class TrackDisplayListener implements ActionListener {
+
+		final JComboBox<String> cb;
+		final RandomAccessibleInterval<FloatType> seedimg;
+
+		public TrackDisplayListener(JComboBox<String> cb, RandomAccessibleInterval<FloatType> seedimg) {
+
+			this.cb = cb;
+			this.seedimg = seedimg;
+
+		}
+
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+
+			displaySelectedTrack = cb.getSelectedIndex();
+
+			ImagePlus displayimp;
+
+			displayimp = ImageJFunctions.show(originalimgA);
+			displayimp.setTitle("Display Tracks");
+
+			Overlay o = displayimp.getOverlay();
+
+			if (displayimp.getOverlay() == null) {
+				o = new Overlay();
+				displayimp.setOverlay(o);
+			}
+
+			o.clear();
+			TrackModel model = new TrackModel(graph);
+			model.getDirectedNeighborIndex();
+
+			if (displaySelectedTrack == 0) {
+
+				DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw, true, 0);
+				totaldisplaytracks.getImp();
+			}
+
+			else {
+
+				for (int index = 0; index < IDALL.size(); ++index) {
+					if (displaySelectedTrack == index + 1) {
+
+						DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw,
+								false, displaySelectedTrack);
+						totaldisplaytracks.getImp();
+
+					}
+
+				}
+
+			}
+
+		}
 
 	}
 
@@ -3306,9 +3351,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 	protected final void close(final JFrame parent, final SliceObserver sliceObserver, RoiListener roiListener) {
 		if (parent != null)
 			parent.dispose();
-		
-		
-		
 
 		isFinished = true;
 	}
@@ -4717,11 +4759,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 			}
 
 			for (int frame = 0; frame < thirdDimensionSize; ++frame)
-				System.out.println("A " + All3DSnakescopy.get(frame).size());
 
-			blobtracker.process();
+				blobtracker.process();
 
-			SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph = blobtracker.getResult();
+			graph = blobtracker.getResult();
 
 			for (int frame = 0; frame < thirdDimensionSize; ++frame)
 				System.out.println("A " + All3DSnakescopy.get(frame).size());
@@ -4730,9 +4771,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			ImagePlus totalimp = ImageJFunctions.show(originalimgA);
 
-			DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(totalimp, graph, colorDraw);
-			totaldisplaytracks.getImp();
-
 			TrackModel model = new TrackModel(graph);
 
 			model.getDirectedNeighborIndex();
@@ -4740,6 +4778,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			// Get all the track id's
 			for (final Integer id : model.trackIDs(true)) {
 
+				IDALL.add(id);
 				// Get the corresponding set for each id
 				model.setName(id, "Track" + id);
 				final HashSet<SnakeObject> Snakeset = model.trackSnakeObjects(id);
@@ -4828,7 +4867,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 					rt.addValue("Intensity Measureimage", list.get(index).IntensitySecROI);
 					rt.addValue("Number of Pixels Measureimage ", list.get(index).numberofPixelsSecRoI);
 					rt.addValue("Mean Intensity Measureimage ", list.get(index).meanIntensitySecROI);
-					Overlay o = totaldisplaytracks.getImp().getOverlay();
 
 				}
 
@@ -4838,6 +4876,59 @@ public class InteractiveActiveContour_ implements PlugIn {
 			}
 
 			rt.show("Results");
+
+			/* Instantiation */
+			final GridBagLayout layout = new GridBagLayout();
+			final GridBagConstraints c = new GridBagConstraints();
+
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 0;
+			c.gridy = 0;
+			c.weightx = 4;
+			c.weighty = 1.5;
+
+			panelSeventh.setLayout(layout);
+
+			final Label Done = new Label("Hope that everything was to your satisfaction!");
+			final Button Exit = new Button("Close and exit");
+			JLabel lbl = new JLabel("Select the TrackID to display");
+
+			String[] choicestrack = new String[IDALL.size() + 1];
+
+			choicestrack[0] = "Display All";
+
+			for (int index = 0; index < IDALL.size(); ++index) {
+
+				String currenttrack = Double.toString(IDALL.get(index));
+
+				choicestrack[index + 1] = "Track " + currenttrack;
+			}
+
+			JComboBox<String> cbtrack = new JComboBox<String>(choicestrack);
+
+			Done.setBackground(new Color(1, 0, 1));
+			Done.setForeground(new Color(255, 255, 255));
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelSeventh.add(lbl, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelSeventh.add(cbtrack, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelSeventh.add(Done, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 50);
+			panelSeventh.add(Exit, c);
+
+			cbtrack.addActionListener(new TrackDisplayListener(cbtrack, originalimgA));
+			Exit.addActionListener(new FinishedButtonListener(Cardframe, true));
+
+			Cardframe.pack();
 
 		}
 
