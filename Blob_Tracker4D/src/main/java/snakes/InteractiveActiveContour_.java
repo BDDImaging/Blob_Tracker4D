@@ -15,6 +15,7 @@ import java.awt.Insets;
 import java.awt.Label;
 import java.awt.Rectangle;
 import java.awt.Scrollbar;
+import java.awt.TextField;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -49,6 +50,7 @@ import java.util.logging.Logger;
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -101,6 +103,7 @@ import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
 import ij.process.ColorProcessor;
+
 import kdTreeBlobs.FlagNode;
 import kdTreeBlobs.NNFlagsearchKDtree;
 import mpicbg.imglib.image.Image;
@@ -130,6 +133,7 @@ import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Pair;
 import net.imglib2.util.RealSum;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.NumericComposite;
@@ -2964,6 +2968,50 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	}
 
+protected class ChooseWorkspaceListener implements ActionListener {
+
+
+		
+
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+
+			JFileChooser chooserA = new JFileChooser();
+			chooserA.setCurrentDirectory(new java.io.File("."));
+			chooserA.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			chooserA.showOpenDialog(panelFirst);
+			usefolder = chooserA.getSelectedFile().getAbsolutePath();
+
+		
+
+		}
+
+	}
+
+	protected class ConfirmWorkspaceListener implements ActionListener {
+		
+		final TextField filename;
+		
+		public ConfirmWorkspaceListener(TextField filename){
+			
+			this.filename = filename;
+			
+		}
+		
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+			
+			addTrackToName = filename.getText();
+			
+			
+		}
+		
+		
+		
+		
+	}
+	
+	
 	// Making the card
 	JFrame Cardframe = new JFrame("4D Tracker");
 	JPanel panelCont = new JPanel();
@@ -2999,6 +3047,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 		final Button JumpSlice = new Button("Jump in fourth dimension to :");
 		final Label timeText = new Label("Third Dimensíonal slice = " + this.thirdDimensionslider, Label.CENTER);
 		final Label sliceText = new Label("Fourth Dimensional slice = " + this.fourthDimensionslider, Label.CENTER);
+		
+		final JButton ChooseWorkspace = new JButton("Choose Workspace");
+		final JLabel outputfilename = new JLabel("Enter output filename: ");
+		TextField inputField = new TextField();
+		inputField.setColumns(10);
+		final JButton Confirm= new JButton("Confirm Workspace Selection");
 
 		final Scrollbar thirdDimensionslider = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
 				thirdDimensionSize);
@@ -3070,6 +3124,22 @@ public class InteractiveActiveContour_ implements PlugIn {
 			c.insets = new Insets(0, 225, 0, 225);
 			panelFirst.add(JumpSlice, c);
 		}
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelFirst.add(ChooseWorkspace, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 10, 0);
+		panelFirst.add(outputfilename, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 10, 0);
+		panelFirst.add(inputField, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelFirst.add(Confirm, c);
 
 		panelFirst.setVisible(true);
 
@@ -3080,7 +3150,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		Segmser.addItemListener(new SegMserListener());
 		Segdog.addItemListener(new SegDogListener());
-
+		ChooseWorkspace.addActionListener(new ChooseWorkspaceListener());
+		Confirm.addActionListener(new ConfirmWorkspaceListener(inputField));
 		JPanel control = new JPanel();
 		control.add(new JButton(new AbstractAction("\u22b2Prev") {
 
@@ -3291,12 +3362,15 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			displaySelectedTrack = cb.getSelectedIndex();
 
-			ImagePlus displayimp;
+			ImagePlus displayimp, displaymeasureimp;
 
 			displayimp = ImageJFunctions.show(originalimgA);
+			displaymeasureimp = ImageJFunctions.show(originalimgB);
+			displaymeasureimp.setTitle("Display Tracks on Measurement image");
 			displayimp.setTitle("Display Tracks");
 
 			Overlay o = displayimp.getOverlay();
+			
 
 			if (displayimp.getOverlay() == null) {
 				o = new Overlay();
@@ -3304,6 +3378,17 @@ public class InteractiveActiveContour_ implements PlugIn {
 			}
 
 			o.clear();
+			
+           Overlay osec = displayimp.getOverlay();
+			
+
+			if (displayimp.getOverlay() == null) {
+				osec = new Overlay();
+				displaymeasureimp.setOverlay(osec);
+			}
+
+			osec.clear();
+			
 			TrackModel model = new TrackModel(graph);
 			model.getDirectedNeighborIndex();
 
@@ -3311,6 +3396,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw, true, 0);
 				totaldisplaytracks.getImp();
+				
+				
+				DisplaymodelGraph totaldisplaytracksmeasure = new DisplaymodelGraph(displaymeasureimp, graph, colorDraw, true, 0);
+				totaldisplaytracksmeasure.getImp();
+				
 			}
 
 			else {
@@ -3321,6 +3411,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 						DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw,
 								false, displaySelectedTrack);
 						totaldisplaytracks.getImp();
+						
+						DisplaymodelGraph totaldisplaymeasuretracks = new DisplaymodelGraph(displaymeasureimp, graph, colorDraw,
+								false, displaySelectedTrack);
+						totaldisplaymeasuretracks.getImp();
+						
+						
 
 					}
 
@@ -4765,7 +4861,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 			graph = blobtracker.getResult();
 
 			for (int frame = 0; frame < thirdDimensionSize; ++frame)
-				System.out.println("A " + All3DSnakescopy.get(frame).size());
 
 			IJ.log("Tracking Complete " + " " + "Displaying results");
 
@@ -4896,7 +4991,18 @@ public class InteractiveActiveContour_ implements PlugIn {
 			String[] choicestrack = new String[IDALL.size() + 1];
 
 			choicestrack[0] = "Display All";
+			Comparator<Integer> Seedidcomparison = new Comparator<Integer>() {
 
+				@Override
+				public int compare(final Integer A, final Integer B) {
+
+					return A - B;
+
+				}
+
+			};
+			
+			Collections.sort(IDALL, Seedidcomparison);
 			for (int index = 0; index < IDALL.size(); ++index) {
 
 				String currenttrack = Double.toString(IDALL.get(index));

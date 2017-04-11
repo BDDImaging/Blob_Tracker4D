@@ -421,8 +421,8 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 
 		gd.addCheckbox("Display Snake Stack", displaysnake);
 		gd.addCheckbox("Advanced_options", advanced);
-		gd.addStringField("Use_folder:", usefolder);
-		gd.addStringField("Choose_filestartname:", addToName);
+		gd.addStringField("Change Workspace?:", usefolder);
+		gd.addStringField("Change Filename?:", addToName);
 
 		// show dialog
 		gd.showDialog();
