@@ -340,7 +340,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 	ArrayList<Roi> BiggerRois;
 
 	public static enum ValueChange {
-		SIGMA, THRESHOLD, ROI, MINMAX, ALL, THIRDDIM, FOURTHDIM, maxSearch, iniSearch, missedframes, MINDIVERSITY, DELTA, MINSIZE, MAXSIZE, MAXVAR, DARKTOBRIGHT, FindBlobsVia, SHOWMSER, SHOWDOG, NORMALIZE, MEDIAN, THIRDDIMTrack, FOURTHDIMTrack, SizeX, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, SHOWPROGRESS
+		SIGMA, THRESHOLD, ROI, MINMAX, ALL, THIRDDIM, FOURTHDIM, maxSearch, iniSearch, missedframes, 
+		MINDIVERSITY, DELTA, MINSIZE, MAXSIZE, MAXVAR, DARKTOBRIGHT, FindBlobsVia, SHOWMSER, SHOWDOG, NORMALIZE, MEDIAN, THIRDDIMTrack, 
+		FOURTHDIMTrack, SizeX, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, SHOWPROGRESS
 	}
 
 	boolean isFinished = false;
@@ -843,8 +845,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			newimg = copytoByteImage(currentimg);
 
-			final List<FlagNode<double[]>> targetNodes = new ArrayList<FlagNode<double[]>>(finalRois.size());
-			final List<RealPoint> targetCoords = new ArrayList<RealPoint>(finalRois.size());
 
 			if (showMSER) {
 
@@ -858,8 +858,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
 					double[] center = new double[] { centerRoi.get(index)[0], centerRoi.get(index)[1] };
-					targetCoords.add(new RealPoint(center));
-					targetNodes.add(new FlagNode<double[]>(centerRoi.get(index)));
+				
 					Roi or = Rois.get(index);
 
 					or.setStrokeColor(Color.red);
@@ -897,8 +896,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 					double[] center = new double[] { peaks.get(index).getDoublePosition(0),
 							peaks.get(index).getDoublePosition(1) };
 
-					targetCoords.add(new RealPoint(center));
-					targetNodes.add(new FlagNode<double[]>(center));
+					
 					Roi or = Rois.get(index);
 
 					or.setStrokeColor(Color.red);
@@ -951,8 +949,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
 					double[] center = new double[] { centerRoi.get(index)[0], centerRoi.get(index)[1] };
-					targetCoords.add(new RealPoint(center));
-					targetNodes.add(new FlagNode<double[]>(centerRoi.get(index)));
+					
 
 					Roi or = Rois.get(index);
 
@@ -1015,8 +1012,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 					double[] center = new double[] { peaks.get(index).getDoublePosition(0),
 							peaks.get(index).getDoublePosition(1) };
 
-					targetCoords.add(new RealPoint(center));
-					targetNodes.add(new FlagNode<double[]>(center));
+					
 					Roi or = Rois.get(index);
 
 					or.setStrokeColor(Color.red);
