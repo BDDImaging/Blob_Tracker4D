@@ -342,7 +342,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public static enum ValueChange {
 		SIGMA, THRESHOLD, ROI, MINMAX, ALL, THIRDDIM, FOURTHDIM, maxSearch, iniSearch, missedframes, 
 		MINDIVERSITY, DELTA, MINSIZE, MAXSIZE, MAXVAR, DARKTOBRIGHT, FindBlobsVia, SHOWMSER, SHOWDOG, NORMALIZE, MEDIAN, THIRDDIMTrack, 
-		FOURTHDIMTrack, SizeX, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, SHOWPROGRESS
+		FOURTHDIMTrack, SizeX, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, SHOWPROGRESS, RADIUS
 	}
 
 	boolean isFinished = false;

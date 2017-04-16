@@ -73,6 +73,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 import snakes.InteractiveActiveContour_.ChooseWorkspaceListener;
 import snakes.InteractiveActiveContour_.ConfirmWorkspaceListener;
+import snakes.InteractiveActiveContour_.DeltaListener;
 import snakes.InteractiveActiveContour_.DisplayBlobsListener;
 import snakes.InteractiveActiveContour_.MaxListener;
 import snakes.InteractiveActiveContour_.MinListener;
@@ -81,6 +82,7 @@ import snakes.InteractiveActiveContour_.SegDogListener;
 import snakes.InteractiveActiveContour_.SegMserListener;
 import snakes.InteractiveActiveContour_.Sigma2Listener;
 import snakes.InteractiveActiveContour_.SigmaListener;
+import snakes.InteractiveActiveContour_.SinglesnakeButtonListener;
 import snakes.InteractiveActiveContour_.ThresholdListener;
 import snakes.InteractiveActiveContour_.ValueChange;
 import snakes.InteractiveActiveContour_.dogListener;
@@ -94,14 +96,26 @@ public class InteractiveSingleCell_ implements PlugIn{
 	final int scrollbarSize = 1000;
 	float sigma = 0.5f;
 	float sigma2 = 0.5f;
-	float threshold = 1f;
+	
 	float deltaMin = 0;
+	
+	RoiListener bigroiListener;
+	
+	float threshold = 1f;
 	float thresholdMin = 0f;
 	float thresholdMax = 1f;
 	int thresholdInit = 1;
+	
 	float thresholdHoughMin = 0f;
 	float thresholdHoughMax = 1f;
 	int thresholdHoughInit = 1;
+	
+	float Radius = 5f;
+	float RadiusMin = 0f;
+	float RadiusMax = 100f;
+	int RadiusInit = 5;
+	
+	
 	public float minDiversity = 1;
 	// steps per octave
 	public static int standardSensitivity = 4;
@@ -191,7 +205,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 	
 	public InteractiveSingleCell_(final ImagePlus imp){
 		this.imp = imp;
-		standardRectangle = new Rectangle(20, 20, imp.getWidth() - 40, imp.getHeight() - 40);
+		standardRectangle = new Rectangle(1, 1, imp.getWidth() - 2, imp.getHeight() - 2);
 		originalimgA = ImageJFunctions.convertFloat(imp.duplicate());
 		height = imp.getHeight();
 		length = imp.getWidth();
@@ -200,8 +214,8 @@ public class InteractiveSingleCell_ implements PlugIn{
 	
 	public InteractiveSingleCell_(final RandomAccessibleInterval<FloatType> originalimgA) {
 		this.originalimgA = originalimgA;
-		standardRectangle = new Rectangle(20, 20, (int) originalimgA.dimension(0) - 40,
-				(int) originalimgA.dimension(1) - 40);
+		standardRectangle = new Rectangle(1, 1, (int) originalimgA.dimension(0) - 2,
+				(int) originalimgA.dimension(1) - 2);
 
 	}
 	
@@ -382,7 +396,6 @@ public class InteractiveSingleCell_ implements PlugIn{
 
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
-					double[] center = new double[] { centerRoi.get(index)[0], centerRoi.get(index)[1] };
 				
 					Roi or = Rois.get(index);
 
@@ -396,12 +409,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 			if (showDOG) {
 
 				overlay.clear();
-				// if we got some mouse click but the ROI did not change we
-				// can return
-				if (!roiChanged && change == ValueChange.ROI) {
-					isComputing = false;
-					return;
-				}
+				
 
 				final DogDetection.ExtremaType type;
 
@@ -418,8 +426,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 				Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
 				for (int index = 0; index < peaks.size(); ++index) {
 
-					double[] center = new double[] { peaks.get(index).getDoublePosition(0),
-							peaks.get(index).getDoublePosition(1) };
+					
 
 				
 					Roi or = Rois.get(index);
@@ -427,6 +434,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 					or.setStrokeColor(colorDraw);
 					overlay.add(or);
 					roimanager.addRoi(or);
+					
 				}
 
 			}
@@ -444,7 +452,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 
 			final Rectangle rect = roi.getBounds();
 
-			standardRectangle = rect;
+			
 			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
 			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
 			interval = new FinalInterval(min, max);
@@ -460,8 +468,9 @@ public class InteractiveSingleCell_ implements PlugIn{
 			thresholdMax = (float) getThresholdMax();
 
 			thresholdMin = (float) getThresholdMin();
-
-		}
+			}
+			
+		
 		
 		if (change == ValueChange.SHOWMSER) {
 			overlay.clear();
@@ -541,13 +550,59 @@ public class InteractiveSingleCell_ implements PlugIn{
 			isComputing = false;
 			return;
 		}
+		
+		
+		if (change == ValueChange.RADIUS){
 			
+			
+			
+		
+			
+			overlay = imp.getOverlay();
+
+			if (overlay == null) {
+				overlay = new Overlay();
+
+				imp.setOverlay(overlay);
+
+			}
+			overlay.clear();
+
+			// if we got some mouse click but the ROI did not change we can return
+			if (!roiChanged && change == ValueChange.ROI) {
+				isComputing = false;
+				return;
+			}
+			
+			int x = 0;
+			int y = 0;
+			for (int index = 0; index < ClickedPoints.size(); ++index){
+				
+				x = ClickedPoints.get(index)[0];
+				y = ClickedPoints.get(index)[1];
+				
+				
+			}
+			final OvalRoi Bigroi = new OvalRoi(Util.round(x - Radius), Util.round(y - Radius), Util.round(2 * Radius),
+					Util.round(2 * Radius));
+			Bigroi.setStrokeColor(colorSelect);
+			overlay.add(Bigroi);
+			
+			
+			roimanager.addRoi(Bigroi);
+			
+			
+			
+		}
+		
+		
 		}
 	// Making the card
 			JFrame Cardframe = new JFrame("Manual Tracker");
 			JPanel panelCont = new JPanel();
 			JPanel panelFirst = new JPanel();
 			JPanel panelSecond = new JPanel();
+			JPanel panelThird = new JPanel();
 			
 			private void Card(){
 				
@@ -559,6 +614,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 
 				panelCont.add(panelFirst, "1");
 				panelCont.add(panelSecond, "2");
+				panelCont.add(panelThird, "3");
 				CheckboxGroup Finders = new CheckboxGroup();
 
 				final Checkbox mser = new Checkbox("MSER", Finders, findBlobsViaMSER);
@@ -828,6 +884,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 				final Checkbox min = new Checkbox("Look for Minima (green)", lookForMinima);
 				final Checkbox max = new Checkbox("Look for Maxima (red)", lookForMaxima);
 				final Button DisplayBlobs = new Button("Display Blobs");
+				final Button Confirm = new Button("Confirm your selection");
 
 				final Label MSparam = new Label("Determine DoG parameters");
 				MSparam.setBackground(new Color(1, 0, 1));
@@ -852,14 +909,9 @@ public class InteractiveSingleCell_ implements PlugIn{
 				c.insets = new Insets(10, 10, 0, 0);
 				panelSecond.add(sigmaText1, c);
 
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(sigma2S, c);
+				
 
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(sigmaText2, c);
-
+			
 				++c.gridy;
 				c.insets = new Insets(10, 0, 0, 0);
 				panelSecond.add(thresholdS, c);
@@ -868,13 +920,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 				c.insets = new Insets(10, 10, 0, 0);
 				panelSecond.add(thresholdText, c);
 
-				++c.gridy;
-				c.insets = new Insets(0, 170, 0, 75);
-				panelSecond.add(min, c);
-
-				++c.gridy;
-				c.insets = new Insets(0, 170, 0, 75);
-				panelSecond.add(max, c);
+			
 
 				++c.gridy;
 				c.insets = new Insets(0, 180, 0, 180);
@@ -883,6 +929,10 @@ public class InteractiveSingleCell_ implements PlugIn{
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 180);
 				panelSecond.add(ClickFast, c);
+				
+				++c.gridy;
+				c.insets = new Insets(10, 0, 0, 0);
+				panelSecond.add(Confirm, c);
 
 				/* Configuration */
 				sigma1.addAdjustmentListener(
@@ -891,8 +941,9 @@ public class InteractiveSingleCell_ implements PlugIn{
 				thresholdS.addAdjustmentListener(new ThresholdListener(thresholdText, thresholdMin, thresholdMax));
 				min.addItemListener(new MinListener());
 				max.addItemListener(new MaxListener());
-				ClickFast.addActionListener(new chooseendListener());
+				ClickFast.addActionListener(new chooseblobListener());
 				DisplayBlobs.addActionListener(new DisplayBlobsListener());
+				Confirm.addActionListener(new ConfirmListener());
 				panelSecond.repaint();
 				panelSecond.validate();
 				Cardframe.pack();
@@ -908,7 +959,57 @@ public class InteractiveSingleCell_ implements PlugIn{
 
 	}
 	
-	protected class chooseendListener implements ActionListener {
+	
+	protected class ConfirmListener implements ActionListener{
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+			
+			
+			imp.getCanvas().removeMouseListener(ml);
+			panelThird.removeAll();
+			/* Instantiation */
+			final GridBagLayout layout = new GridBagLayout();
+			final GridBagConstraints c = new GridBagConstraints();
+			panelThird.setLayout(layout);
+			
+
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 0;
+			c.gridy = 4;
+			c.weightx = 1;
+			
+			final Label Name = new Label("Step 3", Label.CENTER);
+			panelThird.add(Name, c);
+			
+			final Scrollbar Radiusbar = new Scrollbar(Scrollbar.HORIZONTAL, RadiusInit, 10, 0, 10 + scrollbarSize);
+			final Label AdjustRadi = new Label("Adjust Cell radius");
+			Radius = util.ScrollbarUtils.computeValueFromScrollbarPosition(RadiusInit, RadiusMin, RadiusMax, scrollbarSize);
+			AdjustRadi.setForeground(new Color(255, 255, 255));
+			AdjustRadi.setBackground(new Color(1, 0, 1));
+
+			final Label sizeTextX = new Label("Radius = " + Radius, Label.CENTER);
+			
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 0);
+			panelThird.add(AdjustRadi, c);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 0);
+			panelThird.add(Radiusbar, c);
+			
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 0);
+			panelThird.add(sizeTextX, c);
+			Radiusbar.addAdjustmentListener(new RadiusListener(sizeTextX, RadiusMin, RadiusMax, scrollbarSize, Radiusbar));
+			panelThird.repaint();
+			panelThird.validate();
+			Cardframe.pack();
+			
+		}
+		
+		
+	}
+	
+	protected class chooseblobListener implements ActionListener {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
@@ -916,6 +1017,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 
 				@Override
 				public void mouseClicked(MouseEvent e) {
+					
 					int x = e.getX();
 					int y = e.getY();
 					if (imp.getWidth() > 1000)
@@ -923,12 +1025,10 @@ public class InteractiveSingleCell_ implements PlugIn{
 					if (imp.getHeight() > 1000)
 						y = 2 * y;
 					
-					System.out.println("You chose: " + x + "," + y);// these
-																	// co-ords
-																// are
-																	// relative
-																	// to the
-																	// component
+					System.out.println("You chose: " + x + "," + y);
+					if (ClickedPoints!=null)
+						ClickedPoints.clear();
+						
 					ClickedPoints.add(new int[] { x, y });
 
 					overlay = imp.getOverlay();
@@ -940,11 +1040,14 @@ public class InteractiveSingleCell_ implements PlugIn{
 
 					}
 
-					final OvalRoi Bigroi = new OvalRoi(Util.round(x - 5), Util.round(y - 5), Util.round(10),
-							Util.round(10));
+					
+					
+					final OvalRoi Bigroi = new OvalRoi(Util.round(x - Radius), Util.round(y - Radius), Util.round(2 * Radius),
+							Util.round(2 * Radius));
 					Bigroi.setStrokeColor(colorSelect);
 					overlay.add(Bigroi);
 					
+				
 
 				}
 
@@ -1154,6 +1257,50 @@ public class InteractiveSingleCell_ implements PlugIn{
 				updatePreview(ValueChange.DELTA);
 			}
 		}
+	}
+	
+	protected class RadiusListener implements AdjustmentListener {
+		final Label label;
+		final float min, max;
+		final int scrollbarSize;
+
+		final Scrollbar radiusScrollbar;
+
+		public RadiusListener(final Label label, final float min, final float max, final int scrollbarSize,
+				final Scrollbar radiusScrollbar) {
+			this.label = label;
+			this.min = min;
+			this.max = max;
+			this.scrollbarSize = scrollbarSize;
+
+			this.radiusScrollbar = radiusScrollbar;
+
+		}
+
+		@Override
+		public void adjustmentValueChanged(final AdjustmentEvent event) {
+			
+		
+				
+			
+			Radius = util.ScrollbarUtils.computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
+
+			radiusScrollbar.setValue(util.ScrollbarUtils.computeScrollbarPositionFromValue(Radius, min, max, scrollbarSize));
+
+			label.setText("Radius = " + Radius);
+
+			
+				while (isComputing) {
+					SimpleMultiThreading.threadWait(10);
+				}
+			
+				
+						updatePreview(ValueChange.RADIUS);
+						
+				
+
+		
+	}
 	}
 	protected class minSizeListener implements AdjustmentListener {
 		final Label label;
@@ -1392,6 +1539,7 @@ protected class ChooseWorkspaceListener implements ActionListener {
 
 		}
 	
+		
 
 	public static void main(String[] args) {
 		
