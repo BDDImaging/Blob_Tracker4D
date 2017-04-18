@@ -31,6 +31,7 @@ import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 import org.jgrapht.graph.DefaultWeightedEdge;
@@ -985,9 +986,9 @@ public class InteractiveSingleCell_ implements PlugIn{
 			
 
 			c.fill = GridBagConstraints.HORIZONTAL;
-			c.gridx = 0;
-			c.gridy = 4;
-			c.weightx = 1;
+			c.gridx = 1;
+			c.gridy = 1;
+			c.weightx = 4;
 			
 			final Label Name = new Label("Step 3", Label.CENTER);
 			panelThird.add(Name, c);
@@ -1000,6 +1001,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 			final JButton ConfirmSelection = new JButton("Confirm Selection");
 			final Checkbox displayrois = new Checkbox("Save Selected Rois to display");
 			final Button JumpFrame = new Button("Confirm and Go to Next Frame :");
+			final Button Done = new Button("Tracking complete");
 			final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
 			final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
 					thirdDimensionSize);
@@ -1032,14 +1034,20 @@ public class InteractiveSingleCell_ implements PlugIn{
 			++c.gridy;
 			panelThird.add(timeText, c);
 			
+			
 			++c.gridy;
 			c.insets = new Insets(10, 0, 0, 0);
 			panelThird.add(ClickFast, c);
-
+			
+		
 			++c.gridy;
 			c.insets = new Insets(0, 175, 0, 175);
 			panelThird.add(JumpFrame, c);
 			
+			
+			++c.gridy;
+			c.insets = new Insets(0, 175, 0, 175);
+			panelThird.add(Done, c);
 			
 			Radiusbar.addAdjustmentListener(new RadiusListener(sizeTextX, RadiusMin, RadiusMax, scrollbarSize, Radiusbar));
 			ConfirmSelection.addActionListener(new OpenRTListener());
@@ -1049,6 +1057,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 			JumpFrame.addActionListener(
 					new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			ClickFast.addActionListener(new chooseblobsameradiListener());
+			Done.addActionListener(new DisplayRoiListener());
 			panelThird.repaint();
 			panelThird.validate();
 			Cardframe.pack();
@@ -1074,7 +1083,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 			
 			thirdDimensionslider = (int) util.ScrollbarUtils.computeIntValueFromScrollbarPosition(event.getValue(), min, max,
 					scrollbarSize);
-			label.setText("Framenumber = " + thirdDimensionslider);
+			label.setText("Time in framenumber = " + thirdDimensionslider);
 
 			thirdDimension = thirdDimensionslider;
 
@@ -1082,6 +1091,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 			imp.setPosition(0, imp.getSlice(), thirdDimension);
 			if (thirdDimension > thirdDimensionSize) {
 				IJ.log("Max frame number exceeded, moving to last frame instead");
+				
 				imp.setPosition(0, imp.getSlice(), thirdDimensionSize);
 				thirdDimension = thirdDimensionSize;
 			}
@@ -1191,12 +1201,22 @@ public class InteractiveSingleCell_ implements PlugIn{
 			}
 			if(thirdDimension <= thirdDimensionSize)
 			   thirdDimension++;
+			
+			else{
+				
+			
 
+				
+				thirdDimension = thirdDimensionSize;
+				
+				
+				
+			}
 			
 				thirdDimensionScroll
 						.setValue(util.ScrollbarUtils.computeIntScrollbarPositionFromValue(thirdDimension, min, max, scrollbarSize));
 				thirdDimensionslider = thirdDimension;
-				timeText.setText("Third Dimension = " + thirdDimensionslider);
+				timeText.setText("Time in framenumber = " + thirdDimensionslider);
 
 				if (thirdDimension > thirdDimensionSize) {
 					IJ.log("Max frame number exceeded, moving to last frame instead");
@@ -1315,14 +1335,24 @@ public class InteractiveSingleCell_ implements PlugIn{
 		}
 			
 			rt.show("Intensity Measurements, Save before closing");
-			if (displayoverlay)
-			new ImagePlus("Overlays", prestack).show();
+		
 			
 		}
 		}
 	}
 	
-	
+	protected class DisplayRoiListener implements ActionListener{
+		
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+			
+			if (displayoverlay)
+				new ImagePlus("Overlays", prestack).show();
+			
+			
+		}
+		
+	}
 	
 	protected class chooseblobListener implements ActionListener {
 		@Override
@@ -1422,7 +1452,8 @@ public class InteractiveSingleCell_ implements PlugIn{
 
 					}
 
-					
+					if (thirdDimension == thirdDimensionSize)
+					JOptionPane.showMessageDialog(Cardframe, "You are at the last frame, save results and exit after completing this step", " Warning ",  JOptionPane.WARNING_MESSAGE);
 					
 					final OvalRoi Bigroi = new OvalRoi(Util.round(x - Radius), Util.round(y - Radius), Util.round(2 * Radius),
 							Util.round(2 * Radius));
