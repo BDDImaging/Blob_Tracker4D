@@ -53,7 +53,99 @@ public class FindersUtils {
 
 	}
 	
+	public static double getNumberofPixels(RandomAccessibleInterval<FloatType> source, Roi roi) {
+
+		double NumberofPixels = 0;
+
+		Cursor<FloatType> currentcursor = Views.iterable(source).localizingCursor();
+
+		final double[] position = new double[source.numDimensions()];
+
+		while (currentcursor.hasNext()) {
+
+			currentcursor.fwd();
+
+			currentcursor.localize(position);
+
+			int x = (int) position[0];
+			int y = (int) position[1];
+
+			if (roi.contains(x, y)) {
+
+				NumberofPixels++;
+
+			}
+
+		}
+
+		return NumberofPixels;
+
+	}
 	
+	
+	public static double getIntensity(RandomAccessibleInterval<FloatType> source, Roi roi) {
+
+		double Intensity = 0;
+
+		Cursor<FloatType> currentcursor = Views.iterable(source).localizingCursor();
+
+		final double[] position = new double[source.numDimensions()];
+
+		while (currentcursor.hasNext()) {
+
+			currentcursor.fwd();
+
+			currentcursor.localize(position);
+
+			int x = (int) position[0];
+			int y = (int) position[1];
+
+			if (roi.contains(x, y)) {
+
+				Intensity += currentcursor.get().getRealDouble();
+
+			}
+
+		}
+
+		return Intensity;
+
+	}
+	
+	public static double[] getCenter(RandomAccessibleInterval<FloatType> source, Roi roi) {
+
+		double Intensity = 0;
+		double[] center = new double[3];
+		Cursor<FloatType> currentcursor = Views.iterable(source).localizingCursor();
+		double SumX = 0;
+		double SumY = 0;
+		final double[] position = new double[source.numDimensions()];
+
+		while (currentcursor.hasNext()) {
+
+			currentcursor.fwd();
+
+			currentcursor.localize(position);
+
+			int x = (int) position[0];
+			int y = (int) position[1];
+
+			if (roi.contains(x, y)) {
+				SumX += currentcursor.getDoublePosition(0) * currentcursor.get().getRealDouble();
+				SumY += currentcursor.getDoublePosition(1) * currentcursor.get().getRealDouble();
+				Intensity += currentcursor.get().getRealDouble();
+
+			}
+
+		}
+		center[0] = SumX / Intensity;
+		center[1] = SumY / Intensity;
+
+		center[2] = 0;
+
+		return center;
+
+	}
 	
 	public static ArrayList<Roi> getcurrentRois(MserTree<UnsignedByteType> newtree) {
 

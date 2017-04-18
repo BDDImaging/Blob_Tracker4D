@@ -21,7 +21,7 @@ public class SimpleFileChooser extends JPanel {
 	JButton Done;
 	JFileChooser chooserA;
 	String choosertitleA;
-
+	ImagePlus impA;
 	JFileChooser chooserB;
 	String choosertitleB;
 
@@ -35,16 +35,21 @@ public class SimpleFileChooser extends JPanel {
 
 		final Label LoadtrackText = new Label("Load image for tracking and measurement");
 		
+		final Label ORText = new Label("OR", Label.CENTER);
+		
 		final Label StartText = new Label("Start Blob Finding and tracking");
 		LoadtrackText.setBackground(new Color(1, 0, 1));
 		LoadtrackText.setForeground(new Color(255, 255, 255));
-		
+		ORText.setBackground(new Color(1, 0, 1));
+		ORText.setForeground(new Color(255, 255, 255));
 	
 		
 		StartText.setBackground(new Color(1, 0, 1));
 		StartText.setForeground(new Color(255, 255, 255));
 		
 		TrackMeasure = new JButton("Upload image");
+		JButton Current = new JButton("Use currently open image");
+		
 		Done = new JButton("Done");
 
 		/* Location */
@@ -71,7 +76,17 @@ public class SimpleFileChooser extends JPanel {
 		c.insets = new Insets(0, 170, 0, 75);
 		frame.add(TrackMeasure, c);
 		
+		++c.gridy;
+		c.insets = new Insets(0, 170, 0, 75);
+		frame.add(ORText, c);
 
+		++c.gridy;
+		c.insets = new Insets(0, 170, 0, 75);
+		frame.add(Current, c);
+		
+		
+		
+		
 		++c.gridy;
 		++c.gridy;
 		
@@ -88,6 +103,7 @@ public class SimpleFileChooser extends JPanel {
 		frame.add(Done, c);
 
 		TrackMeasure.addActionListener(new UploadTrackListener(frame));
+		Current.addActionListener(new CurrentListener());
 		Done.addActionListener(new DoneButtonListener(frame, true));
 		frame.addWindowListener(new FrameListener(frame));
 		frame.setVisible(true);
@@ -141,7 +157,21 @@ public class SimpleFileChooser extends JPanel {
 			} else {
 				System.out.println("No Selection ");
 			}
+			
+			impA = new Opener().openImage(chooserA.getSelectedFile().getPath());
 
+		}
+
+	}
+
+	protected class CurrentListener implements ActionListener {
+
+		
+
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+
+			impA = IJ.getImage();
 		}
 
 	}
@@ -161,7 +191,7 @@ public class SimpleFileChooser extends JPanel {
 		public void actionPerformed(final ActionEvent arg0) {
 			wasDone = Done;
 			
-			ImagePlus impA = new Opener().openImage(chooserA.getSelectedFile().getPath());
+			
 
 			// Tracking and Measurement is done with imageA 
            

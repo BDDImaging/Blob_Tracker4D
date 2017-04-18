@@ -3050,9 +3050,9 @@ protected class ChooseWorkspaceListener implements ActionListener {
 		inputField.setColumns(10);
 		final JButton Confirm= new JButton("Confirm Workspace Selection");
 
-		final Scrollbar thirdDimensionslider = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
+		final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
 				thirdDimensionSize);
-		thirdDimensionslider.setBlockIncrement(1);
+		thirdDimensionsliderS.setBlockIncrement(1);
 		this.thirdDimensionslider = (int) computeValueFromScrollbarPosition(thirdDimensionsliderInit, timeMin,
 				thirdDimensionSize, thirdDimensionSize);
 
@@ -3099,7 +3099,7 @@ protected class ChooseWorkspaceListener implements ActionListener {
 
 		if (thirdDimensionSize > 1) {
 			++c.gridy;
-			panelFirst.add(thirdDimensionslider, c);
+			panelFirst.add(thirdDimensionsliderS, c);
 
 			++c.gridy;
 			panelFirst.add(timeText, c);
@@ -3312,13 +3312,13 @@ protected class ChooseWorkspaceListener implements ActionListener {
 		NearestNeighborTracker.addItemListener(new NNListener());
 		txtfile.addItemListener(new SaveasTXT());
 		xlsfile.addItemListener(new SaveasXLS());
-		thirdDimensionslider
+		thirdDimensionsliderS
 				.addAdjustmentListener(new thirdDimensionsliderListener(timeText, timeMin, thirdDimensionSize));
 		fourthDimensionslider
 				.addAdjustmentListener(new fourthDimensionsliderListener(sliceText, sliceMin, fourthDimensionSize));
 
 		JumpFrame.addActionListener(
-				new moveInThirdDimListener(thirdDimensionslider, timeText, timeMin, thirdDimensionSize));
+				new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 		JumpSlice.addActionListener(
 				new moveInFourthDimListener(fourthDimensionslider, sliceText, sliceMin, fourthDimensionSize));
 
