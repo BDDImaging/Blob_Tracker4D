@@ -148,7 +148,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 	float minDiversityMin = 0;
 	float minDiversityMax = 1;
 	int thirdDimensionslider = 1;
-	int thirdDimensionsliderInit = 1;
+	int thirdDimensionsliderInit = 0;
 	ArrayList<int[]> ClickedPoints = new ArrayList<int[]>();
 	int timeMin = 1;
 	long minSize = 1;
@@ -845,6 +845,8 @@ public class InteractiveSingleCell_ implements PlugIn{
 				panelSecond.repaint();
 				panelSecond.validate();
 				Cardframe.pack();
+				
+				
 			}
 
 			if (findBlobsViaMSER != oldState) {
@@ -986,9 +988,10 @@ public class InteractiveSingleCell_ implements PlugIn{
 			
 
 			c.fill = GridBagConstraints.HORIZONTAL;
-			c.gridx = 1;
-			c.gridy = 1;
+			c.gridx = 0;
+			c.gridy = 0;
 			c.weightx = 4;
+			c.weighty = 3.5;
 			
 			final Label Name = new Label("Step 3", Label.CENTER);
 			panelThird.add(Name, c);
@@ -1000,7 +1003,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 			AdjustRadi.setBackground(new Color(1, 0, 1));
 			final JButton ConfirmSelection = new JButton("Confirm Selection");
 			final Checkbox displayrois = new Checkbox("Save Selected Rois to display");
-			final Button JumpFrame = new Button("Confirm and Go to Next Frame :");
+			final Button JumpFrame = new Button("Confirm and Go to Next Frame");
 			final Button Done = new Button("Tracking complete");
 			final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
 			final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
@@ -1041,12 +1044,12 @@ public class InteractiveSingleCell_ implements PlugIn{
 			
 		
 			++c.gridy;
-			c.insets = new Insets(0, 175, 0, 175);
+			c.insets = new Insets(10, 175, 0, 175);
 			panelThird.add(JumpFrame, c);
 			
 			
 			++c.gridy;
-			c.insets = new Insets(0, 175, 0, 175);
+			c.insets = new Insets(10, 175, 0, 175);
 			panelThird.add(Done, c);
 			
 			Radiusbar.addAdjustmentListener(new RadiusListener(sizeTextX, RadiusMin, RadiusMax, scrollbarSize, Radiusbar));

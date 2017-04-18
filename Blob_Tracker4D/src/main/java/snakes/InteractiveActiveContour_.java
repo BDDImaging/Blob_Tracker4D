@@ -185,7 +185,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	float minDiversityMin = 0;
 	float minDiversityMax = 1;
 	int thirdDimensionslider = 0;
-	int thirdDimensionsliderInit = 1;
+	int thirdDimensionsliderInit = 0;
 	int timeMin = 1;
 	long minSize = 1;
 	long maxSize = 1000;
