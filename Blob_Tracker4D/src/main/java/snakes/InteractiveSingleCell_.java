@@ -148,7 +148,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 	float minDiversityMin = 0;
 	float minDiversityMax = 1;
 	int thirdDimensionslider = 1;
-	int thirdDimensionsliderInit = 0;
+	int thirdDimensionsliderInit = 1;
 	ArrayList<int[]> ClickedPoints = new ArrayList<int[]>();
 	int timeMin = 1;
 	long minSize = 1;
@@ -171,7 +171,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 	Color colorDraw = Color.green;
 	Color colorPrevious = Color.gray;
 	ImagePlus imp;
-	MouseListener ml;
+	MouseListener ml, mlnew;
 	MouseListener removeml;
 	RandomAccessibleInterval<FloatType> CurrentView;
 	ArrayList<Roi> Rois;
@@ -990,7 +990,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 			c.fill = GridBagConstraints.HORIZONTAL;
 			c.gridx = 0;
 			c.gridy = 0;
-			c.weightx = 4;
+			c.weightx = 1;
 			c.weighty = 3.5;
 			
 			final Label Name = new Label("Step 3", Label.CENTER);
@@ -1002,7 +1002,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 			AdjustRadi.setForeground(new Color(255, 255, 255));
 			AdjustRadi.setBackground(new Color(1, 0, 1));
 			final JButton ConfirmSelection = new JButton("Confirm Selection");
-			final Checkbox displayrois = new Checkbox("Save Selected Rois to display");
+			final Checkbox displayrois = new Checkbox("Save Selected Roi Selection");
 			final Button JumpFrame = new Button("Confirm and Go to Next Frame");
 			final Button Done = new Button("Tracking complete");
 			final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
@@ -1012,7 +1012,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 		     thirdDimensionslider = (int) util.ScrollbarUtils.computeValueFromScrollbarPosition(thirdDimensionsliderInit, timeMin,
 					thirdDimensionSize, thirdDimensionSize);
 			final Label sizeTextX = new Label("Radius = " + Radius, Label.CENTER);
-			final Button ClickFast = new Button("Click here to choose a cell, then click on image");
+			final Button ClickFast = new Button("Start Cell Selections");
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 0);
 			panelThird.add(AdjustRadi, c);
@@ -1039,14 +1039,13 @@ public class InteractiveSingleCell_ implements PlugIn{
 			
 			
 			++c.gridy;
-			c.insets = new Insets(10, 0, 0, 0);
+			c.insets = new Insets(10, 175, 0, 175);
 			panelThird.add(ClickFast, c);
 			
-		
+			
 			++c.gridy;
 			c.insets = new Insets(10, 175, 0, 175);
 			panelThird.add(JumpFrame, c);
-			
 			
 			++c.gridy;
 			c.insets = new Insets(10, 175, 0, 175);
@@ -1142,7 +1141,6 @@ public class InteractiveSingleCell_ implements PlugIn{
 			RoiManager roimanager = RoiManager.getInstance();
 			Roi[] RoisOrig = roimanager.getRoisAsArray();
 			
-			
 			if (imp != null) {
 
 				Overlay o = imp.getOverlay();
@@ -1186,13 +1184,12 @@ public class InteractiveSingleCell_ implements PlugIn{
 				rt.incrementCounter();
 				
 				rt.addValue("FrameNumber", thirdDimension);
-				rt.addValue("RoiLabel", RoisOrig[index].getName());
 				rt.addValue("LocationX", center[0] );
 				rt.addValue("LocationY", center[1] );
 				rt.addValue("Intensity", Intensity);
 				rt.addValue("Number of Pixels", NumberofPixels);
 				rt.addValue("Mean Intensity", Intensity / NumberofPixels);
-				
+				rt.addValue("Radius of ROI", Radius);
 			
 			
 			
@@ -1231,6 +1228,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 				}
 
 				imp = WindowManager.getCurrentImage();
+				
 				Roi roi = imp.getRoi();
 				if (roi == null) {
 					// IJ.log( "A rectangular ROI is required to define the
@@ -1247,7 +1245,67 @@ public class InteractiveSingleCell_ implements PlugIn{
 				// check whenever roi is modified to update accordingly
 				roiListener = new RoiListener();
 				imp.getCanvas().addMouseListener(roiListener);
+				imp.getCanvas().addMouseListener(mlnew = new MouseListener() {
 
+					@Override
+					public void mouseClicked(MouseEvent e) {
+						
+						int x = e.getX();
+						int y = e.getY();
+						if (imp.getWidth() > 1000)
+							x = 2 * x;
+						if (imp.getHeight() > 1000)
+							y = 2 * y;
+						
+						System.out.println("You chose: " + x + "," + y);
+						if (ClickedPoints!=null)
+							ClickedPoints.clear();
+							
+						ClickedPoints.add(new int[] { x, y });
+
+						overlay = imp.getOverlay();
+
+						if (overlay == null) {
+							overlay = new Overlay();
+
+							imp.setOverlay(overlay);
+
+						}
+
+						if (thirdDimension == thirdDimensionSize)
+						JOptionPane.showMessageDialog(Cardframe, "You are at the last frame, save results and exit after completing this step", " Warning ",  JOptionPane.WARNING_MESSAGE);
+						
+						final OvalRoi Bigroi = new OvalRoi(Util.round(x - Radius), Util.round(y - Radius), Util.round(2 * Radius),
+								Util.round(2 * Radius));
+						Bigroi.setStrokeColor(colorSelect);
+						overlay.add(Bigroi);
+						RoiManager roim = RoiManager.getInstance();
+						if(roim.getRoisAsArray().length > 0)
+						roim.runCommand("Delete");
+					updatePreview(ValueChange.RADIUS);
+
+					}
+
+					@Override
+					public void mousePressed(MouseEvent e) {
+
+					}
+
+					@Override
+					public void mouseReleased(MouseEvent e) {
+
+					}
+
+					@Override
+					public void mouseEntered(MouseEvent e) {
+
+					}
+
+					@Override
+					public void mouseExited(MouseEvent e) {
+
+					}
+				});
 			
 		}
 	}
@@ -1324,13 +1382,12 @@ public class InteractiveSingleCell_ implements PlugIn{
 				rt.incrementCounter();
 				
 				rt.addValue("FrameNumber", thirdDimension);
-				rt.addValue("RoiLabel", RoisOrig[index].getName());
 				rt.addValue("LocationX", center[0] );
 				rt.addValue("LocationY", center[1] );
 				rt.addValue("Intensity", Intensity);
 				rt.addValue("Number of Pixels", NumberofPixels);
 				rt.addValue("Mean Intensity", Intensity / NumberofPixels);
-				
+				rt.addValue("Radius of ROI", Radius);
 			
 			
 			
@@ -1428,7 +1485,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
-			imp.getCanvas().addMouseListener(ml = new MouseListener() {
+			imp.getCanvas().addMouseListener(mlnew = new MouseListener() {
 
 				@Override
 				public void mouseClicked(MouseEvent e) {

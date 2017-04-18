@@ -184,8 +184,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 	ArrayList<Integer> IDALL = new ArrayList<Integer>();
 	float minDiversityMin = 0;
 	float minDiversityMax = 1;
-	int thirdDimensionslider = 0;
-	int thirdDimensionsliderInit = 0;
+	int thirdDimensionslider = 1;
+	int thirdDimensionsliderInit = 1;
 	int timeMin = 1;
 	long minSize = 1;
 	long maxSize = 1000;
@@ -193,7 +193,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	long minSizemax = 100;
 	long maxSizemin = 100;
 	long maxSizemax = 10000;
-	int fourthDimensionslider = 0;
+	int fourthDimensionslider = 1;
 	int fourthDimensionsliderInit = 1;
 	int sliceMin = 1;
 	ArrayList<Roi> SnakeRoisA;
