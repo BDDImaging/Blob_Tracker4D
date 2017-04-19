@@ -68,6 +68,8 @@ import net.imglib2.algorithm.localextrema.RefinedPeak;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Pair;
+import net.imglib2.util.ValuePair;
 import net.imglib2.view.Views;
 import snakes.InteractiveActiveContour_.ImagePlusListener;
 import snakes.InteractiveActiveContour_.RoiListener;
@@ -104,8 +106,8 @@ public class InteractiveSingleCell_ implements PlugIn{
 	float RadiusMax = 100f;
 	int RadiusInit = 5;
 	
-	ArrayList<Roi> AllSelectedrois;
-	ArrayList<double[]> AllSelectedcenter;
+	ArrayList<Pair<Integer, Roi>> AllSelectedrois;
+	ArrayList<Pair<Integer, double[]>> AllSelectedcenter;
 	public float minDiversity = 1;
 	// steps per octave
 	public static int standardSensitivity = 4;
@@ -151,7 +153,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 	float minDiversityMax = 1;
 	int thirdDimensionslider = 1;
 	int thirdDimensionsliderInit = 1;
-	ArrayList<int[]> ClickedPoints = new ArrayList<int[]>();
+	ArrayList<double[]> ClickedPoints = new ArrayList<double[]>();
 	int timeMin = 1;
 	long minSize = 1;
 	long maxSize = 1000;
@@ -171,6 +173,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 	Color colorSelect = Color.red;
 	Color colorCreate = Color.red;
 	Color colorDraw = Color.green;
+	Color colorKDtree = Color.blue;
 	Color colorPrevious = Color.gray;
 	Color colorFinal = Color.YELLOW;
 	ImagePlus imp;
@@ -264,8 +267,8 @@ public class InteractiveSingleCell_ implements PlugIn{
 		
 		Rois = new ArrayList<Roi>();
 		peaks = new ArrayList<RefinedPeak<Point>>();
-		AllSelectedrois = new ArrayList<Roi>();
-		AllSelectedcenter = new ArrayList<double[]>();
+		AllSelectedrois = new ArrayList<Pair<Integer, Roi>>();
+		AllSelectedcenter = new ArrayList<Pair<Integer, double[]>>();
 		
 		if (originalimgA.numDimensions()!=3){
 			
@@ -399,22 +402,36 @@ public class InteractiveSingleCell_ implements PlugIn{
 
 				for (int index = 0; index < AllSelectedrois.size(); ++index){
 					
-					Roi oldroi = AllSelectedrois.get(index);
+					Roi oldroi = AllSelectedrois.get(index).getB();
 					oldroi.setStrokeColor(colorPrevious);
 					overlay.add(oldroi);
 					
 				}
 				newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 				Rois = util.FindersUtils.getcurrentRois(newtree);
+				
+				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints ,currentimg);
+				
+				ArrayList<Roi> KnearestRoi = util.FindersUtils.getKNearestRois(currentimg, Rois, nearestRoi, 5);
+				
 				ArrayList<double[]> centerRoi = util.FindersUtils.getRoiMean(newtree);
 
-				for (int index = 0; index < centerRoi.size(); ++index) {
+				for (int index = 0; index < KnearestRoi.size(); ++index) {
 
 				
-					Roi or = Rois.get(index);
+					Roi or = KnearestRoi.get(index);
 
+					if (or == nearestRoi){
+						or.setStrokeColor(colorKDtree);
+						
+					}
+					else
+						
 					or.setStrokeColor(colorDraw);
 					overlay.add(or);
+					
+					
+					
 					roimanager.addRoi(or);
 				}
 
@@ -425,7 +442,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 				overlay.clear();
                for (int index = 0; index < AllSelectedrois.size(); ++index){
 					
-					Roi oldroi = AllSelectedrois.get(index);
+					Roi oldroi = AllSelectedrois.get(index).getB();
 					oldroi.setStrokeColor(colorPrevious);
 					overlay.add(oldroi);
 					
@@ -444,13 +461,24 @@ public class InteractiveSingleCell_ implements PlugIn{
 				peaks = newdog.getSubpixelPeaks();
 
 				Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
-				for (int index = 0; index < peaks.size(); ++index) {
+				
+				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints ,currentimg);
+				
+				ArrayList<Roi> KnearestRoi = util.FindersUtils.getKNearestRois(currentimg, Rois, nearestRoi, 5);
+				
+				for (int index = 0; index < KnearestRoi.size(); ++index) {
 
 					
 
 				
-					Roi or = Rois.get(index);
+					Roi or = KnearestRoi.get(index);
 
+					if (or == nearestRoi){
+						or.setStrokeColor(colorKDtree);
+						
+					}
+					else
+						
 					or.setStrokeColor(colorDraw);
 					overlay.add(or);
 					roimanager.addRoi(or);
@@ -601,8 +629,8 @@ public class InteractiveSingleCell_ implements PlugIn{
 			int y = 0;
 			for (int index = 0; index < ClickedPoints.size(); ++index){
 				
-				x = ClickedPoints.get(index)[0];
-				y = ClickedPoints.get(index)[1];
+				x = (int)ClickedPoints.get(index)[0];
+				y = (int)ClickedPoints.get(index)[1];
 				
 				
 			}
@@ -1083,6 +1111,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 			final JButton ConfirmSelection = new JButton("Confirm Selection");
 			final Checkbox displayrois = new Checkbox("Save Selected Roi Selection");
 			final Button JumpFrame = new Button("Confirm and Go to Next Frame");
+			final Button JumpBackFrame = new Button("Made a mistake, go back in Time");
 			final Button Done = new Button("Tracking complete");
 			final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
 			final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
@@ -1116,6 +1145,9 @@ public class InteractiveSingleCell_ implements PlugIn{
 			c.insets = new Insets(10, 175, 0, 175);
 			panelThird.add(JumpFrame, c);
 			
+		//	++c.gridy;
+		//	c.insets = new Insets(10, 175, 0, 175);
+		//	panelThird.add(JumpBackFrame, c);
 			
 			++c.gridy;
 			c.insets = new Insets(10, 175, 0, 175);
@@ -1128,6 +1160,9 @@ public class InteractiveSingleCell_ implements PlugIn{
 			.addAdjustmentListener(new thirdDimensionsliderListener(timeText, timeMin, thirdDimensionSize));
 			JumpFrame.addActionListener(
 					new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+			JumpBackFrame.addActionListener(
+					new movebackInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+			
 			Done.addActionListener(new DisplayRoiListener());
 			panelThird.repaint();
 			panelThird.validate();
@@ -1237,10 +1272,11 @@ public class InteractiveSingleCell_ implements PlugIn{
 				Roi or = RoisOrig[index];
 				
 				
+				Pair<Integer, Roi> timeorderedroi = new ValuePair<Integer, Roi>(thirdDimension, or); 
+				Pair<Integer, double[]> timeorderedcenter = new ValuePair<Integer, double[]>(thirdDimension, center); 
 				
-				
-				AllSelectedrois.add(or);
-				AllSelectedcenter.add(center);
+				AllSelectedrois.add(timeorderedroi);
+				AllSelectedcenter.add(timeorderedcenter);
 
 				o.add(or);
 
@@ -1255,8 +1291,8 @@ public class InteractiveSingleCell_ implements PlugIn{
 					
 					for (int j = 1; j < AllSelectedcenter.size() - 1; ++j){
 						
-						double[] start = AllSelectedcenter.get(j - 1);
-						double[] end = AllSelectedcenter.get(j);
+						double[] start = AllSelectedcenter.get(j - 1).getB();
+						double[] end = AllSelectedcenter.get(j).getB();
 						Line lineor = new Line(start[0], start[1], end[0], end[1]);
 						
 						
@@ -1354,7 +1390,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 						if (ClickedPoints!=null)
 							ClickedPoints.clear();
 							
-						ClickedPoints.add(new int[] { x, y });
+						ClickedPoints.add(new double[] { x, y });
 
 						overlay = imp.getOverlay();
 
@@ -1402,6 +1438,154 @@ public class InteractiveSingleCell_ implements PlugIn{
 			
 		}
 	}
+	
+	
+	protected class movebackInThirdDimListener implements ActionListener {
+		final float min, max;
+		Label timeText;
+		final Scrollbar thirdDimensionScroll;
+
+		public movebackInThirdDimListener(Scrollbar thirdDimensionScroll, Label timeText, float min, float max) {
+			this.thirdDimensionScroll = thirdDimensionScroll;
+			this.min = min;
+			this.max = max;
+			this.timeText = timeText;
+		}
+
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+
+			
+
+				thirdDimension = thirdDimension - 1;
+				CurrentView =  util.FindersUtils.getCurrentView(originalimgA, thirdDimension);
+				ImagePlus Localimp = ImageJFunctions.show(CurrentView);
+				prestack.deleteLastSlice();
+				prestack.addSlice(Localimp.getImageStack()
+						.getProcessor(thirdDimension).convertToRGB());
+				cp = (ColorProcessor) (prestack.getProcessor(thirdDimension).duplicate());
+
+				Localimp.close();
+				
+			updatePreview(ValueChange.THIRDDIM);
+			
+		
+			
+			if (imp != null) {
+
+				Overlay o = imp.getOverlay();
+
+				if (o == null) {
+					o = new Overlay();
+					imp.setOverlay(o);
+				}
+				o.clear();
+			
+			}
+			
+			for (int index = 0; index < AllSelectedrois.size(); ++index){
+				
+				if (AllSelectedrois.get(index).getA() == thirdDimension)
+					AllSelectedrois.remove(index);
+				
+			}
+            for (int index = 0; index < AllSelectedcenter.size(); ++index){
+				
+				if (AllSelectedcenter.get(index).getA() == thirdDimension)
+					AllSelectedcenter.remove(index);
+				
+			}
+			
+				thirdDimensionScroll
+						.setValue(util.ScrollbarUtils.computeIntScrollbarPositionFromValue(thirdDimension, min, max, scrollbarSize));
+				thirdDimensionslider = thirdDimension;
+				timeText.setText("Time in framenumber = " + thirdDimensionslider);
+
+			
+				imp = WindowManager.getCurrentImage();
+				
+				Roi roi = imp.getRoi();
+				if (roi == null) {
+					// IJ.log( "A rectangular ROI is required to define the
+					// area..."
+					// );
+					imp.setRoi(standardRectangle);
+					roi = imp.getRoi();
+				}
+
+				// compute first version
+				updatePreview(ValueChange.THIRDDIMTrack);
+				isStarted = true;
+
+				// check whenever roi is modified to update accordingly
+				roiListener = new RoiListener();
+				imp.getCanvas().addMouseListener(roiListener);
+				imp.getCanvas().addMouseListener(mlnew = new MouseListener() {
+
+					@Override
+					public void mouseClicked(MouseEvent e) {
+						
+						int x = e.getX();
+						int y = e.getY();
+						if (imp.getWidth() > 1000)
+							x = 2 * x;
+						if (imp.getHeight() > 1000)
+							y = 2 * y;
+						
+						System.out.println("You chose: " + x + "," + y);
+						if (ClickedPoints!=null)
+							ClickedPoints.clear();
+							
+						ClickedPoints.add(new double[] { x, y });
+
+						overlay = imp.getOverlay();
+
+						if (overlay == null) {
+							overlay = new Overlay();
+
+							imp.setOverlay(overlay);
+
+						}
+
+						if (thirdDimension == thirdDimensionSize)
+						JOptionPane.showMessageDialog(Cardframe, "You are at the last frame, save results and exit after completing this step", " Warning ",  JOptionPane.WARNING_MESSAGE);
+						
+						final OvalRoi Bigroi = new OvalRoi(Util.round(x - Radius), Util.round(y - Radius), Util.round(2 * Radius),
+								Util.round(2 * Radius));
+						Bigroi.setStrokeColor(colorSelect);
+						overlay.add(Bigroi);
+						RoiManager roim = RoiManager.getInstance();
+						if(roim.getRoisAsArray().length > 0)
+						roim.runCommand("Delete");
+					updatePreview(ValueChange.RADIUS);
+
+					}
+
+					@Override
+					public void mousePressed(MouseEvent e) {
+
+					}
+
+					@Override
+					public void mouseReleased(MouseEvent e) {
+
+					}
+
+					@Override
+					public void mouseEntered(MouseEvent e) {
+
+					}
+
+					@Override
+					public void mouseExited(MouseEvent e) {
+
+					}
+				});
+			
+		}
+	}
+
+	
 
 	protected class DisplayListener implements ItemListener{
 		
@@ -1456,7 +1640,9 @@ public class InteractiveSingleCell_ implements PlugIn{
 				double Intensity = util.FindersUtils.getIntensity(currentimg, RoisOrig[index]);
 				double NumberofPixels = util.FindersUtils.getNumberofPixels(currentimg, RoisOrig[index]);
 				Roi or = RoisOrig[index];
-				AllSelectedrois.add(or);
+				
+				Pair<Integer, Roi> timeorderedroi = new ValuePair<Integer, Roi>(thirdDimension, or);
+				AllSelectedrois.add(timeorderedroi);
 
 				or.setStrokeColor(Color.red);
 				o.add(or);
@@ -1533,7 +1719,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 					if (ClickedPoints!=null)
 						ClickedPoints.clear();
 						
-					ClickedPoints.add(new int[] { x, y });
+					ClickedPoints.add(new double[] { x, y });
 
 					overlay = imp.getOverlay();
 

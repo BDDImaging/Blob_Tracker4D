@@ -1,23 +1,32 @@
 package util;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+
+import org.jgrapht.graph.DefaultWeightedEdge;
 
 import blobfinder.SortListbyproperty;
 import ij.ImagePlus;
 import ij.gui.EllipseRoi;
 import ij.gui.OvalRoi;
 import ij.gui.Roi;
+import kdTreeBlobs.FlagNode;
+import kdTreeBlobs.NNFlagsearchKDtree;
 import mpicbg.imglib.image.Image;
 import mpicbg.imglib.util.Util;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.IterableInterval;
+import net.imglib2.KDTree;
 import net.imglib2.Point;
 import net.imglib2.PointSampleList;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealPoint;
 import net.imglib2.algorithm.componenttree.mser.Mser;
 import net.imglib2.algorithm.componenttree.mser.MserTree;
 import net.imglib2.algorithm.localextrema.RefinedPeak;
@@ -27,12 +36,13 @@ import net.imglib2.img.ImgFactory;
 import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Pair;
 import net.imglib2.util.RealSum;
+import net.imglib2.util.ValuePair;
 import net.imglib2.view.Views;
+import snakes.SnakeObject;
 
 public class FindersUtils {
-	
-	
 
 	public static ArrayList<Roi> getcurrentRois(ArrayList<RefinedPeak<Point>> peaks, double sigma, double sigma2) {
 
@@ -52,7 +62,7 @@ public class FindersUtils {
 		return Allrois;
 
 	}
-	
+
 	public static double getNumberofPixels(RandomAccessibleInterval<FloatType> source, Roi roi) {
 
 		double NumberofPixels = 0;
@@ -81,8 +91,90 @@ public class FindersUtils {
 		return NumberofPixels;
 
 	}
-	
-	
+
+	public static ArrayList<Roi> getKNearestRois(final RandomAccessibleInterval<FloatType> currentimg,
+			ArrayList<Roi> Allrois, Roi kdtreeroi, int k) {
+
+		ArrayList<Roi> KnearestRoi = new ArrayList<Roi>();
+		Roi Knear = null;
+
+		ArrayList<Pair<Double, Roi>> distRoi = new ArrayList<Pair<Double, Roi>>();
+		double[] kdcenter = util.FindersUtils.getCenter(currentimg, kdtreeroi);
+
+		
+
+			for (int index = 0; index < Allrois.size(); ++index) {
+
+				double[] roicenter = util.FindersUtils.getCenter(currentimg, Allrois.get(index));
+
+				Pair<Double, Roi> distpair = new ValuePair<Double, Roi>(util.Boundingboxes.Distance(kdcenter, roicenter), Allrois.get(index));
+				
+				distRoi.add(distpair);
+
+			}
+			
+			Comparator<Pair<Double, Roi>> distcomparison = new Comparator<Pair<Double, Roi>>() {
+
+				@Override
+				public int compare(final Pair<Double, Roi> A, final Pair<Double, Roi> B) {
+
+					return (int) (A.getA() - B.getA());
+
+				}
+
+			};
+			
+			Collections.sort(distRoi, distcomparison);
+			
+			for (int i = 0; i < k ; ++i){
+				
+				KnearestRoi.add(distRoi.get(i).getB());
+				
+			}
+			
+		
+
+		return KnearestRoi;
+
+	}
+
+	public static Roi getNearestRois(ArrayList<Roi> Allrois, ArrayList<double[]> Clickedpoint,
+			final RandomAccessibleInterval<FloatType> currentimg) {
+
+		Roi KDtreeroi = null;
+
+		final List<RealPoint> targetCoords = new ArrayList<RealPoint>(Allrois.size());
+		final List<FlagNode<Roi>> targetNodes = new ArrayList<FlagNode<Roi>>(Allrois.size());
+		Iterator<double[]> baseobjectiterator = Clickedpoint.iterator();
+		for (int index = 0; index < Allrois.size(); ++index) {
+
+			targetCoords.add(new RealPoint(util.FindersUtils.getCenter(currentimg, Allrois.get(index))));
+
+			targetNodes.add(new FlagNode<Roi>(Allrois.get(index)));
+
+		}
+
+		if (targetNodes.size() > 0 && targetCoords.size() > 0) {
+
+			final KDTree<FlagNode<Roi>> Tree = new KDTree<FlagNode<Roi>>(targetNodes, targetCoords);
+
+			final NNFlagsearchKDtree<Roi> Search = new NNFlagsearchKDtree<Roi>(Tree);
+
+			while (baseobjectiterator.hasNext()) {
+
+				final double[] source = baseobjectiterator.next();
+				final RealPoint sourceCoords = new RealPoint(source);
+				Search.search(sourceCoords);
+				final FlagNode<Roi> targetNode = Search.getSampler().get();
+
+				KDtreeroi = targetNode.getValue();
+			}
+
+		}
+
+		return KDtreeroi;
+	}
+
 	public static double getIntensity(RandomAccessibleInterval<FloatType> source, Roi roi) {
 
 		double Intensity = 0;
@@ -111,7 +203,7 @@ public class FindersUtils {
 		return Intensity;
 
 	}
-	
+
 	public static double[] getCenter(RandomAccessibleInterval<FloatType> source, Roi roi) {
 
 		double Intensity = 0;
@@ -146,7 +238,7 @@ public class FindersUtils {
 		return center;
 
 	}
-	
+
 	public static ArrayList<Roi> getcurrentRois(MserTree<UnsignedByteType> newtree) {
 
 		final HashSet<Mser<UnsignedByteType>> rootset = newtree.roots();
@@ -186,23 +278,21 @@ public class FindersUtils {
 		return Allrois;
 
 	}
-	
-	public static RandomAccessibleInterval<FloatType> getCurrentView(RandomAccessibleInterval<FloatType> originalimgA, int thirdDimension) {
+
+	public static RandomAccessibleInterval<FloatType> getCurrentView(RandomAccessibleInterval<FloatType> originalimgA,
+			int thirdDimension) {
 
 		final FloatType type = originalimgA.randomAccess().get().createVariable();
 		long[] dim = { originalimgA.dimension(0), originalimgA.dimension(1) };
 		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(originalimgA, type);
 		RandomAccessibleInterval<FloatType> totalimg = factory.create(dim, type);
 
-		
-
-			totalimg = Views.hyperSlice(originalimgA, 2, thirdDimension - 1);
-
+		totalimg = Views.hyperSlice(originalimgA, 2, thirdDimension - 1);
 
 		return totalimg;
 
 	}
-	
+
 	/**
 	 * Extract the current 2d region of interest from the souce image
 	 * 
@@ -213,7 +303,8 @@ public class FindersUtils {
 	 * @return
 	 */
 
-	public static RandomAccessibleInterval<FloatType> extractImage(final RandomAccessibleInterval<FloatType> intervalView, FinalInterval interval) {
+	public static RandomAccessibleInterval<FloatType> extractImage(
+			final RandomAccessibleInterval<FloatType> intervalView, FinalInterval interval) {
 
 		final FloatType type = intervalView.randomAccess().get().createVariable();
 		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
@@ -224,6 +315,7 @@ public class FindersUtils {
 
 		return totalimg;
 	}
+
 	/**
 	 * Generic, type-agnostic method to create an identical copy of an Img
 	 *
@@ -261,7 +353,7 @@ public class FindersUtils {
 		// return the copy
 		return output;
 	}
-	
+
 	public static ArrayList<double[]> getRoiMean(MserTree<UnsignedByteType> newtree) {
 
 		final HashSet<Mser<UnsignedByteType>> rootset = newtree.roots();
@@ -289,7 +381,7 @@ public class FindersUtils {
 		return AllmeanCovar;
 
 	}
-	
+
 	public static Img<FloatType> copyImage(final RandomAccessibleInterval<FloatType> input) {
 		// create a new Image with the same dimensions but the other imgFactory
 		// note that the input provides the size for the new image by
@@ -316,6 +408,7 @@ public class FindersUtils {
 		// return the copy
 		return output;
 	}
+
 	public static Float AutomaticThresholding(RandomAccessibleInterval<FloatType> inputimg) {
 
 		FloatType max = new FloatType();
@@ -345,6 +438,7 @@ public class FindersUtils {
 		return ThresholdNew;
 
 	}
+
 	public static Img<FloatType> copy(final RandomAccessibleInterval<FloatType> input) {
 		// create a new Image with the same dimensions but the other imgFactory
 		// note that the input provides the size for the new image by
@@ -463,6 +557,7 @@ public class FindersUtils {
 		return ThresholdNew;
 
 	}
+
 	/**
 	 * 2D correlated Gaussian
 	 * 
