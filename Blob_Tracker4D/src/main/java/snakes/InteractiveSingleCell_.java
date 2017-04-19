@@ -1445,7 +1445,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 
 					}
 
-					
+					overlay.clear();
 					
 					final OvalRoi Bigroi = new OvalRoi(Util.round(x - Radius), Util.round(y - Radius), Util.round(2 * Radius),
 							Util.round(2 * Radius));
@@ -1512,6 +1512,7 @@ public class InteractiveSingleCell_ implements PlugIn{
 
 					}
 
+					overlay.clear();
 					if (thirdDimension == thirdDimensionSize)
 					JOptionPane.showMessageDialog(Cardframe, "You are at the last frame, save results and exit after completing this step", " Warning ",  JOptionPane.WARNING_MESSAGE);
 					
