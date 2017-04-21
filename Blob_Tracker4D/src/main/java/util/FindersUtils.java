@@ -1,5 +1,6 @@
 package util;
 
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -118,8 +119,14 @@ public class FindersUtils {
 				@Override
 				public int compare(final Pair<Double, Roi> A, final Pair<Double, Roi> B) {
 
-					return (int) (A.getA() - B.getA());
-
+					double diff= A.getA() - B.getA();
+					
+					if ( diff < 0 )
+						return -1;
+					else if ( diff > 0 )
+						return 1;
+					else
+						return 0;
 				}
 
 			};
@@ -138,8 +145,7 @@ public class FindersUtils {
 
 	}
 
-	public static Roi getNearestRois(ArrayList<Roi> Allrois, ArrayList<double[]> Clickedpoint,
-			final RandomAccessibleInterval<FloatType> currentimg) {
+	public static Roi getNearestRois(ArrayList<Roi> Allrois, ArrayList<double[]> Clickedpoint) {
 
 		Roi KDtreeroi = null;
 
@@ -148,7 +154,12 @@ public class FindersUtils {
 		Iterator<double[]> baseobjectiterator = Clickedpoint.iterator();
 		for (int index = 0; index < Allrois.size(); ++index) {
 
-			targetCoords.add(new RealPoint(util.FindersUtils.getCenter(currentimg, Allrois.get(index))));
+			 Roi r = Allrois.get(index);
+			 Rectangle rect = r.getBounds();
+			 
+			 targetCoords.add( new RealPoint(rect.x + rect.width/2.0, rect.y + rect.height/2.0 ) );
+			 
+			//targetCoords.add(new RealPoint(util.FindersUtils.getCenter(currentimg, Allrois.get(index))));
 
 			targetNodes.add(new FlagNode<Roi>(Allrois.get(index)));
 

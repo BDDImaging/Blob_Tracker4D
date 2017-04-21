@@ -5,7 +5,7 @@ import javax.swing.JFrame;
 import ij.ImageJ;
 import ij.plugin.PlugIn;
 
-public class KCellAutomated_Tracker implements PlugIn {
+public class KCellAutomated_Tracker3D implements PlugIn {
 
 	@Override
 	public void run(String arg) {

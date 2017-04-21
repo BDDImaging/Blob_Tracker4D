@@ -46,8 +46,8 @@ public class FileChooser extends JPanel {
 		StartText.setBackground(new Color(1, 0, 1));
 		StartText.setForeground(new Color(255, 255, 255));
 		
-		Track = new JButton("Upload Tracking image");
-		Measure = new JButton("Upload image for performing measurments");
+		Track = new JButton("Open Tracking image");
+		Measure = new JButton("Open image for performing measurments");
 		Done = new JButton("Done");
 
 		/* Location */

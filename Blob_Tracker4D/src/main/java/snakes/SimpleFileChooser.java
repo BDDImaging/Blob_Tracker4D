@@ -37,20 +37,17 @@ public class SimpleFileChooser extends JPanel {
 		
 		final Label ORText = new Label("OR", Label.CENTER);
 		
-		final Label StartText = new Label("Start Blob Finding and tracking");
 		LoadtrackText.setBackground(new Color(1, 0, 1));
 		LoadtrackText.setForeground(new Color(255, 255, 255));
 		ORText.setBackground(new Color(1, 0, 1));
 		ORText.setForeground(new Color(255, 255, 255));
 	
 		
-		StartText.setBackground(new Color(1, 0, 1));
-		StartText.setForeground(new Color(255, 255, 255));
 		
-		TrackMeasure = new JButton("Upload image");
+		
+		TrackMeasure = new JButton("Open image");
 		JButton Current = new JButton("Use currently open image");
 		
-		Done = new JButton("Done");
 
 		/* Location */
 		frame.setLayout(layout);
@@ -86,25 +83,10 @@ public class SimpleFileChooser extends JPanel {
 		
 		
 		
-		
-		++c.gridy;
-		++c.gridy;
-		
-
-		++c.gridy;
-		c.insets = new Insets(0, 170, 0, 75);
-		frame.add(StartText, c);
-
-		++c.gridy;
-		++c.gridy;
-		++c.gridy;
-		++c.gridy;
-		c.insets = new Insets(0, 170, 0, 75);
-		frame.add(Done, c);
+	
 
 		TrackMeasure.addActionListener(new UploadTrackListener(frame));
-		Current.addActionListener(new CurrentListener());
-		Done.addActionListener(new DoneButtonListener(frame, true));
+		Current.addActionListener(new CurrentListener(frame));
 		frame.addWindowListener(new FrameListener(frame));
 		frame.setVisible(true);
 
@@ -159,37 +141,6 @@ public class SimpleFileChooser extends JPanel {
 			}
 			
 			impA = new Opener().openImage(chooserA.getSelectedFile().getPath());
-
-		}
-
-	}
-
-	protected class CurrentListener implements ActionListener {
-
-		
-
-		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-
-			impA = IJ.getImage();
-		}
-
-	}
-
-	
-
-	protected class DoneButtonListener implements ActionListener {
-		final Frame parent;
-		final boolean Done;
-
-		public DoneButtonListener(Frame parent, final boolean Done) {
-			this.parent = parent;
-			this.Done = Done;
-		}
-
-		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-			wasDone = Done;
 			
 			
 
@@ -200,8 +151,41 @@ public class SimpleFileChooser extends JPanel {
 			
 			new InteractiveSingleCell_(originalimgA).run(null);
 			close(parent);
+
 		}
+
 	}
+
+	protected class CurrentListener implements ActionListener {
+
+		final Frame parent;
+
+		public CurrentListener(Frame parent) {
+
+			this.parent = parent;
+
+		}
+
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+
+			impA = IJ.getImage();
+			
+			
+			// Tracking and Measurement is done with imageA 
+	           
+		    
+			RandomAccessibleInterval<FloatType> originalimgA = ImageJFunctions.convertFloat(impA);
+			
+			new InteractiveSingleCell_(originalimgA).run(null);
+			close(parent);
+		}
+
+	}
+
+	
+
+
 
 	protected final void close(final Frame parent) {
 		if (parent != null)
