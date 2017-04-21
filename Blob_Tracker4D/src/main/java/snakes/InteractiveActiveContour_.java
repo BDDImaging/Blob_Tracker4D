@@ -3009,7 +3009,7 @@ protected class ChooseWorkspaceListener implements ActionListener {
 	
 	
 	// Making the card
-	JFrame Cardframe = new JFrame("4D Tracker");
+	JFrame Cardframe = new JFrame("KCell Automated Tracker");
 	JPanel panelCont = new JPanel();
 	JPanel panelFirst = new JPanel();
 	JPanel panelSecond = new JPanel();

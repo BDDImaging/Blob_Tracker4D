@@ -27,7 +27,7 @@ public class FileChooser extends JPanel {
 	String choosertitleB;
 
 	public FileChooser() {
-		final JFrame frame = new JFrame("Welcome to Karmen Tracker");
+		final JFrame frame = new JFrame("Welcome to KCell Automated Tracker");
 		frame.setSize(800, 300);
 
 		/* Instantiation */
