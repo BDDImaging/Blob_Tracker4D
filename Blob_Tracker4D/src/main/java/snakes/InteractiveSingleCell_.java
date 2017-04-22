@@ -1006,9 +1006,94 @@ public class InteractiveSingleCell_ implements PlugIn {
 		public void itemStateChanged(final ItemEvent arg0) {
 
 			
-			if (arg0.getStateChange() == ItemEvent.SELECTED)
-				Dialogue();
-		
+			if (arg0.getStateChange() == ItemEvent.SELECTED){
+				
+				panelFirst.removeAll();
+				CheckboxGroup Finders = new CheckboxGroup();
+				final Checkbox mser = new Checkbox("MSER", Finders, findBlobsViaMSER);
+			final Checkbox dog = new Checkbox("DoG", Finders, findBlobsViaDOG);
+
+			final JButton ChooseWorkspace = new JButton("Choose Directory to save results in");
+			final JLabel outputfilename = new JLabel("Enter output filename: ");
+
+			TextField inputField = new TextField();
+			inputField.setColumns(10);
+			final JLabel CellName = new JLabel("Enter Cell Name/Label: ");
+
+			TextField inputFieldName = new TextField();
+			inputFieldName.setColumns(10);
+
+			final JButton Reset = new JButton("Restart");
+			final GridBagLayout layout = new GridBagLayout();
+			final GridBagConstraints c = new GridBagConstraints();
+
+			panelFirst.setLayout(layout);
+
+			final Label Name = new Label("Step 1", Label.CENTER);
+			panelFirst.add(Name, c);
+
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 0;
+			c.gridy = 4;
+			c.weightx = 1;
+
+			final Label Ends = new Label("Method Choice for finding Blobs");
+
+			++c.gridy;
+			panelFirst.add(Ends, c);
+
+			
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 0);
+			panelFirst.add(dog, c);
+
+			
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 10, 0);
+			panelFirst.add(outputfilename, c);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 10, 0);
+			panelFirst.add(inputField, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 10, 0);
+			panelFirst.add(CellName, c);
+
+			++c.gridy;
+			c.insets = new Insets(10, 10, 10, 0);
+			panelFirst.add(inputFieldName, c);
+
+		//	++c.gridy;
+		//	c.insets = new Insets(10, 10, 0, 0);
+		//	panelFirst.add(Confirm, c);
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 0);
+			panelFirst.add(ChooseWorkspace, c);
+			
+			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 0);
+			panelFirst.add(Reset, c);
+
+			panelFirst.setVisible(true);
+
+			mser.addItemListener(new MserListener());
+			dog.addItemListener(new dogListener());
+			final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
+			final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
+					thirdDimensionSize);
+			thirdDimensionslider = (int) util.ScrollbarUtils.computeValueFromScrollbarPosition(thirdDimensionsliderInit,
+					timeMin, thirdDimensionSize, thirdDimensionSize);
+			Reset.addActionListener(new ResetListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+
+			ChooseWorkspace.addActionListener(new ChooseWorkspaceListener(inputField, inputFieldName));
+			//Confirm.addActionListener(new ConfirmWorkspaceListener(inputField, inputFieldName));
+			panelFirst.repaint();
+			panelFirst.validate();
+			Cardframe.pack();
+
+			}
 		
 		}
 	}
@@ -1270,7 +1355,35 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 		}
 	}
+	protected class skipThirdDimListener implements ActionListener {
+		final float min, max;
+		Label timeText;
+		final Scrollbar thirdDimensionScroll;
 
+		public skipThirdDimListener(Scrollbar thirdDimensionScroll, Label timeText, float min, float max) {
+			this.thirdDimensionScroll = thirdDimensionScroll;
+			this.min = min;
+			this.max = max;
+			this.timeText = timeText;
+		}
+
+		@Override
+		public void actionPerformed(final ActionEvent arg0) {
+
+			if (thirdDimension < thirdDimensionSize)
+			thirdDimension = thirdDimension + 1;
+			CurrentView = util.FindersUtils.getCurrentView(originalimgA, thirdDimension);
+			
+			overlay.clear();
+			RoiManager roim = RoiManager.getInstance();
+			if (roim.getRoisAsArray()!=null)
+				roim.runCommand("Delete");
+			updatePreview(ValueChange.THIRDDIMTrack);
+			
+			
+		}
+		
+	}
 	protected class moveInThirdDimListener implements ActionListener {
 		final float min, max;
 		Label timeText;
@@ -1409,6 +1522,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
+			if (thirdDimension > 1)
 			thirdDimension = thirdDimension - 1;
 			CurrentView = util.FindersUtils.getCurrentView(originalimgA, thirdDimension);
 		
@@ -1497,7 +1611,8 @@ public class InteractiveSingleCell_ implements PlugIn {
 			RoiManager roim = RoiManager.getInstance();
 			if (roim.getRoisAsArray()!=null)
 				roim.runCommand("Delete");
-			// compute first version
+			
+			ClickMouseBackTrack();
 			updatePreview(ValueChange.THIRDDIMTrack);
 			isStarted = true;
 		
@@ -1505,7 +1620,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			roiListener = new RoiListener();
 			
 			
-			ClickMouseBackTrack();
+			
 			
 		
 			
@@ -1636,6 +1751,8 @@ public class InteractiveSingleCell_ implements PlugIn {
 			if (displayoverlay)
 				new ImagePlus("Overlays", prestack).show();
 			Localimp.close();
+			prestack = new ImageStack((int) originalimgA.dimension(0), (int) originalimgA.dimension(1),
+					java.awt.image.ColorModel.getRGBdefault());
 			NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
 			nf.setMaximumFractionDigits(3);
 			try {
@@ -1708,20 +1825,28 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 			final Scrollbar radiusbar = new Scrollbar(Scrollbar.HORIZONTAL, radiusInit, 10, 0, 10 + scrollbarSize);
 			final Label AdjustRadi = new Label("Adjust Cell radius");
+			final Label CurrentFrame = new Label("Current Time Frame");
 			radius = util.ScrollbarUtils.computeValueFromScrollbarPosition(radiusInit, radiusMin, radiusMax,
 					scrollbarSize);
+			
 			AdjustRadi.setForeground(new Color(255, 255, 255));
 			AdjustRadi.setBackground(new Color(1, 0, 1));
+			
+			CurrentFrame.setForeground(new Color(255, 255, 255));
+			CurrentFrame.setBackground(new Color(1, 0, 1));
+			
+			
 			final JButton ConfirmSelection = new JButton("Confirm Selection");
 			final Button JumpFrame = new Button("Confirm and Go to Next Frame");
-			final Button JumpBackFrame = new Button("Go back a Frame");
-			final Button Done = new Button("Tracking complete");
+			final Button SkipFrame = new Button("No good Cell found, Skip this Time Frame");
+			final Button JumpBackFrame = new Button("Go back a Time Frame to unselect");
+			final Button Done = new Button("Display Tracks");
 			final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
 			final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
 					thirdDimensionSize);
 			thirdDimensionslider = (int) util.ScrollbarUtils.computeValueFromScrollbarPosition(thirdDimensionsliderInit,
 					timeMin, thirdDimensionSize, thirdDimensionSize);
-			final Label sizeTextX = new Label("radius = " + radius, Label.CENTER);
+			final Label sizeTextX = new Label("Radius = " + radius, Label.CENTER);
 
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 0);
@@ -1735,6 +1860,10 @@ public class InteractiveSingleCell_ implements PlugIn {
 			panelThird.add(sizeTextX, c);
 			
 			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 0);
+			panelThird.add(CurrentFrame, c);
+			
+			++c.gridy;
 			panelThird.add(thirdDimensionsliderS, c);
 
 			++c.gridy;
@@ -1744,6 +1873,11 @@ public class InteractiveSingleCell_ implements PlugIn {
 			c.insets = new Insets(10, 175, 0, 175);
 			panelThird.add(JumpFrame, c);
 
+			++c.gridy;
+			c.insets = new Insets(10, 175, 0, 175);
+			panelThird.add(SkipFrame, c);
+			
+			
 			++c.gridy;
 			c.insets = new Insets(10, 175, 0, 175);
 			panelThird.add(JumpBackFrame, c);
@@ -1762,6 +1896,8 @@ public class InteractiveSingleCell_ implements PlugIn {
 					new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			JumpBackFrame.addActionListener(
 					new movebackInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+			SkipFrame.addActionListener(
+					new skipThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 
 			Done.addActionListener(new DisplayRoiListener());
 			panelThird.repaint();
@@ -1773,6 +1909,49 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 	}
 
+	public void LeftRightClick(int x, int y, MouseEvent e){
+		
+		RoiManager roim = RoiManager.getInstance();
+		if (roim.getRoisAsArray().length > 0)
+			roim.runCommand("Delete");
+		if(SwingUtilities.isLeftMouseButton(e) && e.isShiftDown() == false){
+			selectedRoi = nearestRoiCurr ;
+			Rectangle rect = selectedRoi.getBounds();
+			double newx = rect.x + rect.width/2.0;
+			double newy = rect.y + rect.height/2.0;
+			selectedRoi = new OvalRoi(Util.round(newx- radius), Util.round(newy - radius), Util.round(2 * radius),
+					Util.round(2 * radius));
+			selectedRoi.setStrokeColor(colorSelect);	
+			overlay.add(selectedRoi);
+			roim.addRoi(selectedRoi);
+			if (ClickedPoints != null)
+				ClickedPoints.clear();
+
+			ClickedPoints.add(new double[] { newx, newy });
+			
+
+			
+		}
+		
+		
+		
+		if(SwingUtilities.isLeftMouseButton(e) && e.isShiftDown()){
+		
+		final OvalRoi Bigroi = new OvalRoi(Util.round(x - radius), Util.round(y - radius),
+				Util.round(2 * radius), Util.round(2 * radius));
+	
+		
+		
+		
+			Bigroi.setStrokeColor(coloroutSelect);
+			
+			
+			overlay.add(Bigroi);
+			roim.addRoi(Bigroi);
+		}
+		
+		
+	}
 	
 	public void ClickMouse(){
 		
@@ -1785,11 +1964,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 
-				Roi Bigroi = null;
 				int x = canvas.offScreenX(e.getX());
                 int y = canvas.offScreenY(e.getY());
 
-				System.out.println("You chose: " + x + "," + y);
 				if (ClickedPoints != null)
 					ClickedPoints.clear();
 
@@ -1806,47 +1983,14 @@ public class InteractiveSingleCell_ implements PlugIn {
 				
 				
 				for (int index = 0; index < overlay.size(); ++index){
-					if (overlay.get(index).getStrokeColor() == colorRadius || overlay.get(index).getStrokeColor() == colorSelect || overlay.get(index).getStrokeColor() == coloroutSelect )
+					if (overlay.get(index).getStrokeColor() == colorRadius || 
+							overlay.get(index).getStrokeColor() == colorSelect || 
+							overlay.get(index).getStrokeColor() == coloroutSelect )
 						overlay.remove(index);
 					}
 				
+				LeftRightClick(x, y, e);
 				
-				// Left click seelcts the nearest detection
-				if(SwingUtilities.isLeftMouseButton(e) && e.isShiftDown() == false){
-					selectedRoi = nearestRoiCurr ;
-					Rectangle rect = selectedRoi.getBounds();
-					double newx = rect.x + rect.width/2.0;
-					double newy = rect.y + rect.height/2.0;
-					selectedRoi = new OvalRoi(Util.round(newx- radius), Util.round(newy - radius), Util.round(2 * radius),
-							Util.round(2 * radius));
-					selectedRoi.setStrokeColor(colorSelect);	
-					overlay.add(selectedRoi);
-					
-					if (ClickedPoints != null)
-						ClickedPoints.clear();
-
-					ClickedPoints.add(new double[] { newx, newy });
-					
-					
-				}
-				if(SwingUtilities.isLeftMouseButton(e) && e.isShiftDown()){
-					
-				
-			
-
-
-				Bigroi = new OvalRoi(Util.round(x - radius), Util.round(y - radius),
-						Util.round(2 * radius), Util.round(2 * radius));
-				
-				
-                  
-              	
-    				Bigroi.setStrokeColor(coloroutSelect);
-              	
-            	overlay.add(Bigroi);
-				}
-                  
-			
 
 			}
 
@@ -1892,7 +2036,6 @@ public class InteractiveSingleCell_ implements PlugIn {
 				int x = canvas.offScreenX(e.getX());
                 int y = canvas.offScreenY(e.getY());
 
-				System.out.println("You chose: " + x + "," + y);
 				if (ClickedPoints != null)
 					ClickedPoints.clear();
 
@@ -1908,7 +2051,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 				}
 				
 				for (int index = 0; index < overlay.size(); ++index){
-					if (overlay.get(index).getStrokeColor() == colorRadius || overlay.get(index).getStrokeColor() == colorSelect || overlay.get(index).getStrokeColor() == coloroutSelect )
+					if (overlay.get(index).getStrokeColor() == colorRadius 
+							|| overlay.get(index).getStrokeColor() == colorSelect || 
+							overlay.get(index).getStrokeColor() == coloroutSelect )
 						overlay.remove(index);
 					}
 				
@@ -1917,40 +2062,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				if (roim.getRoisAsArray()!=null)
 					roim.runCommand("Delete");
 
-				if(SwingUtilities.isLeftMouseButton(e) && e.isShiftDown() == false){
-					selectedRoi = nearestRoiCurr ;
-					Rectangle rect = selectedRoi.getBounds();
-					double newx = rect.x + rect.width/2.0;
-					double newy = rect.y + rect.height/2.0;
-					selectedRoi = new OvalRoi(Util.round(rect.x + rect.width/2.0 - radius), Util.round(rect.y + rect.height/2.0 - radius), Util.round(2 * radius),
-							Util.round(2 * radius));
-					selectedRoi.setStrokeColor(colorSelect);	
-					overlay.add(selectedRoi);
-					roim.addRoi(selectedRoi);
-					if (ClickedPoints != null)
-						ClickedPoints.clear();
-
-					ClickedPoints.add(new double[] { newx, newy });
-
-					
-				}
-				
-				
-				
-				if(SwingUtilities.isLeftMouseButton(e) && e.isShiftDown()){
-				
-				final OvalRoi Bigroi = new OvalRoi(Util.round(x - radius), Util.round(y - radius),
-						Util.round(2 * radius), Util.round(2 * radius));
-			
-				
-				
-				
-					Bigroi.setStrokeColor(coloroutSelect);
-					
-					
-					overlay.add(Bigroi);
-					roim.addRoi(Bigroi);
-				}
+				LeftRightClick(x, y, e);
 				
 				Roi[] RoisOrig = roim.getRoisAsArray();
 				for (int index = 0; index < RoisOrig.length; ++index) {
@@ -2022,7 +2134,6 @@ public class InteractiveSingleCell_ implements PlugIn {
 					int x = canvas.offScreenX(e.getX());
 	                int y = canvas.offScreenY(e.getY());
 
-					System.out.println("You chose: " + x + "," + y);
 					if (ClickedPoints != null)
 						ClickedPoints.clear();
 
@@ -2038,7 +2149,8 @@ public class InteractiveSingleCell_ implements PlugIn {
 					}
 
 					for (int index = 0; index < overlay.size(); ++index){
-						if (overlay.get(index).getStrokeColor() == colorRadius || overlay.get(index).getStrokeColor() == colorSelect || overlay.get(index).getStrokeColor() == coloroutSelect )
+						if (overlay.get(index).getStrokeColor() == colorRadius || 
+								overlay.get(index).getStrokeColor() == colorSelect || overlay.get(index).getStrokeColor() == coloroutSelect )
 							overlay.remove(index);
 						}
 					
@@ -2046,36 +2158,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 					if (roim.getRoisAsArray()!=null)
 						roim.runCommand("Delete");
 					
-					// Left click seelcts the nearest detection
-					if(SwingUtilities.isLeftMouseButton(e) && e.isShiftDown() == false){
-						selectedRoi = nearestRoiCurr ;
-						Rectangle rect = selectedRoi.getBounds();
-						double newx = rect.x + rect.width/2.0;
-						double newy = rect.y + rect.height/2.0;
-						selectedRoi = new OvalRoi(Util.round(newx- radius), Util.round(newy - radius), Util.round(2 * radius),
-								Util.round(2 * radius));
-						selectedRoi.setStrokeColor(colorSelect);	
-						overlay.add(selectedRoi);
-						roim.addRoi(selectedRoi);
-						
-						if (ClickedPoints != null)
-							ClickedPoints.clear();
-
-						ClickedPoints.add(new double[] { newx, newy });
-						
-						
-					}
-					
-					if(SwingUtilities.isLeftMouseButton(e) && e.isShiftDown()){
-					Bigroi = new OvalRoi(Util.round(x - radius), Util.round(y - radius),
-							Util.round(2 * radius), Util.round(2 * radius));
-				
-        				Bigroi.setStrokeColor(coloroutSelect);
-        				overlay.add(Bigroi);
-        				roim.addRoi(Bigroi);
-					}
-        				
-           
+					LeftRightClick(x, y, e);
 
 				}
 
@@ -2175,17 +2258,23 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 			final Label Name = new Label("Step 3", Label.CENTER);
 			panelThird.add(Name, c);
-
+			final Label CurrentFrame = new Label("Current Time Frame");
 			final Scrollbar radiusbar = new Scrollbar(Scrollbar.HORIZONTAL, radiusInit, 10, 0, 10 + scrollbarSize);
 			final Label AdjustRadi = new Label("Adjust Cell radius");
 			radius = util.ScrollbarUtils.computeValueFromScrollbarPosition(radiusInit, radiusMin, radiusMax,
 					scrollbarSize);
+			
 			AdjustRadi.setForeground(new Color(255, 255, 255));
 			AdjustRadi.setBackground(new Color(1, 0, 1));
+
+			CurrentFrame.setForeground(new Color(255, 255, 255));
+			CurrentFrame.setBackground(new Color(1, 0, 1));
+			
 			final JButton ConfirmSelection = new JButton("Confirm Selection");
 			final Button JumpFrame = new Button("Confirm and Go to Next Time Frame");
-			final Button JumpBackFrame = new Button("Go back a Time Frame");
-			final Button Done = new Button("Tracking complete");
+			final Button SkipFrame = new Button("No good Cell found, Skip this Time Frame");
+			final Button JumpBackFrame = new Button("Go back a Time Frame to unselect");
+			final Button Done = new Button("Display Tracks");
 			final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
 			final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
 					thirdDimensionSize);
@@ -2205,6 +2294,10 @@ public class InteractiveSingleCell_ implements PlugIn {
 			panelThird.add(sizeTextX, c);
 			
 			++c.gridy;
+			c.insets = new Insets(10, 10, 0, 0);
+			panelThird.add(CurrentFrame, c);
+			
+			++c.gridy;
 			panelThird.add(thirdDimensionsliderS, c);
 
 			++c.gridy;
@@ -2214,6 +2307,10 @@ public class InteractiveSingleCell_ implements PlugIn {
 			c.insets = new Insets(10, 175, 0, 175);
 			panelThird.add(JumpFrame, c);
 
+			++c.gridy;
+			c.insets = new Insets(10, 175, 0, 175);
+			panelThird.add(SkipFrame, c);
+			
 			++c.gridy;
 			c.insets = new Insets(10, 175, 0, 175);
 			panelThird.add(JumpBackFrame, c);
@@ -2232,7 +2329,8 @@ public class InteractiveSingleCell_ implements PlugIn {
 					new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			JumpBackFrame.addActionListener(
 					new movebackInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
-
+			SkipFrame.addActionListener(
+					new skipThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			Done.addActionListener(new DisplayRoiListener());
 			panelThird.repaint();
 			panelThird.validate();
@@ -2712,7 +2810,14 @@ public class InteractiveSingleCell_ implements PlugIn {
 	}
 
 	protected class ChooseWorkspaceListener implements ActionListener {
+		final TextField filename;
+		final TextField Cellname;
 
+		public ChooseWorkspaceListener(TextField filename, TextField inputFieldName) {
+
+			this.filename = filename;
+			this.Cellname = inputFieldName;
+		}
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
@@ -2721,6 +2826,14 @@ public class InteractiveSingleCell_ implements PlugIn {
 			chooserA.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 			chooserA.showOpenDialog(panelFirst);
 			usefolder = chooserA.getSelectedFile().getAbsolutePath();
+			
+			
+
+
+				addTrackToName = filename.getText();
+				addCellName = Cellname.getText();
+
+			
 
 		}
 

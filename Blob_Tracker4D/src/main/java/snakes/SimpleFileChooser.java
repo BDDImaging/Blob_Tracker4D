@@ -142,18 +142,24 @@ public class SimpleFileChooser extends JPanel {
 			
 			impA = new Opener().openImage(chooserA.getSelectedFile().getPath());
 			
-			
+			Done(parent);
 
-			// Tracking and Measurement is done with imageA 
-           
-			    
-			RandomAccessibleInterval<FloatType> originalimgA = ImageJFunctions.convertFloat(impA);
-			
-			new InteractiveSingleCell_(originalimgA).run(null);
-			close(parent);
-
+		
 		}
 
+	}
+	
+	public void Done(Frame parent){
+		
+		// Tracking and Measurement is done with imageA 
+        
+	    
+		RandomAccessibleInterval<FloatType> originalimgA = ImageJFunctions.convertFloat(impA);
+		
+		new InteractiveSingleCell_(originalimgA).run(null);
+		close(parent);
+
+		
 	}
 
 	protected class CurrentListener implements ActionListener {
@@ -172,13 +178,7 @@ public class SimpleFileChooser extends JPanel {
 			impA = IJ.getImage();
 			
 			
-			// Tracking and Measurement is done with imageA 
-	           
-		    
-			RandomAccessibleInterval<FloatType> originalimgA = ImageJFunctions.convertFloat(impA);
-			
-			new InteractiveSingleCell_(originalimgA).run(null);
-			close(parent);
+			Done(parent);
 		}
 
 	}

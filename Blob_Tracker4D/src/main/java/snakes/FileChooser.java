@@ -48,7 +48,6 @@ public class FileChooser extends JPanel {
 		
 		Track = new JButton("Open Tracking image");
 		Measure = new JButton("Open image for performing measurments");
-		Done = new JButton("Done");
 
 		/* Location */
 		frame.setLayout(layout);
@@ -89,16 +88,10 @@ public class FileChooser extends JPanel {
 		c.insets = new Insets(0, 170, 0, 75);
 		frame.add(StartText, c);
 
-		++c.gridy;
-		++c.gridy;
-		++c.gridy;
-		++c.gridy;
-		c.insets = new Insets(0, 170, 0, 75);
-		frame.add(Done, c);
+		
 
 		Track.addActionListener(new UploadTrackListener(frame));
 		Measure.addActionListener(new MeasureListener(frame));
-		Done.addActionListener(new DoneButtonListener(frame, true));
 		frame.addWindowListener(new FrameListener(frame));
 		frame.setVisible(true);
 
@@ -152,6 +145,7 @@ public class FileChooser extends JPanel {
 				System.out.println("No Selection ");
 			}
 
+			Done(parent, wasDone);
 		}
 
 	}
@@ -189,38 +183,31 @@ public class FileChooser extends JPanel {
 			} else {
 				System.out.println("No Selection ");
 			}
-
+			Done(parent, wasDone);
 		}
 
 	}
 
-	protected class DoneButtonListener implements ActionListener {
-		final Frame parent;
-		final boolean Done;
+	public void Done(Frame parent, final boolean Done){
+		
+		
+		wasDone = Done;
+		
+		ImagePlus impA = new Opener().openImage(chooserA.getSelectedFile().getPath());
+		ImagePlus impB = new Opener().openImage(chooserB.getSelectedFile().getPath());
 
-		public DoneButtonListener(Frame parent, final boolean Done) {
-			this.parent = parent;
-			this.Done = Done;
-		}
-
-		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-			wasDone = Done;
-			
-			ImagePlus impA = new Opener().openImage(chooserA.getSelectedFile().getPath());
-			ImagePlus impB = new Opener().openImage(chooserB.getSelectedFile().getPath());
-
-			// Tracking is done with imageA measurment is performed on both the
-			// images
-           
-			    
-			RandomAccessibleInterval<FloatType> originalimgA = ImageJFunctions.convertFloat(impA);
-			RandomAccessibleInterval<FloatType> originalimgB = ImageJFunctions.convertFloat(impB);
-			
-			new InteractiveActiveContour_(originalimgA, originalimgB).run(null);
-			close(parent);
-		}
+		// Tracking is done with imageA measurment is performed on both the
+		// images
+       
+		    
+		RandomAccessibleInterval<FloatType> originalimgA = ImageJFunctions.convertFloat(impA);
+		RandomAccessibleInterval<FloatType> originalimgB = ImageJFunctions.convertFloat(impB);
+		
+		new InteractiveActiveContour_(originalimgA, originalimgB).run(null);
+		close(parent);
 	}
+	
+	
 
 	protected final void close(final Frame parent) {
 		if (parent != null)
