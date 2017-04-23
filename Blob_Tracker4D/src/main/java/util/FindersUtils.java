@@ -146,13 +146,12 @@ public class FindersUtils {
 
 	}
 
-	public static Roi getNearestRois(ArrayList<Roi> Allrois, ArrayList<double[]> Clickedpoint) {
+	public static Roi getNearestRois(ArrayList<Roi> Allrois, double[] Clickedpoint) {
 
 		Roi KDtreeroi = null;
 
 		final List<RealPoint> targetCoords = new ArrayList<RealPoint>(Allrois.size());
 		final List<FlagNode<Roi>> targetNodes = new ArrayList<FlagNode<Roi>>(Allrois.size());
-		Iterator<double[]> baseobjectiterator = Clickedpoint.iterator();
 		for (int index = 0; index < Allrois.size(); ++index) {
 
 			 Roi r = Allrois.get(index);
@@ -171,15 +170,13 @@ public class FindersUtils {
 
 			final NNFlagsearchKDtree<Roi> Search = new NNFlagsearchKDtree<Roi>(Tree);
 
-			while (baseobjectiterator.hasNext()) {
 
-				final double[] source = baseobjectiterator.next();
+				final double[] source = Clickedpoint;
 				final RealPoint sourceCoords = new RealPoint(source);
 				Search.search(sourceCoords);
 				final FlagNode<Roi> targetNode = Search.getSampler().get();
 
 				KDtreeroi = targetNode.getValue();
-			}
 
 		}
 

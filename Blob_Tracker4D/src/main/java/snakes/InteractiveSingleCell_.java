@@ -28,6 +28,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -170,7 +171,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	float minDiversityMax = 1;
 	int thirdDimensionslider = 1;
 	int thirdDimensionsliderInit = 1;
-	ArrayList<double[]> ClickedPoints = new ArrayList<double[]>();
+	HashMap<Integer, double[]> ClickedPoints = new HashMap<Integer, double[]>();
 	int timeMin = 1;
 	long minSize = 1;
 	long maxSize = 1000;
@@ -287,6 +288,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	@Override
 	public void run(String arg) {
 
+		ClickedPoints.put(0, null);
 		Rois = new ArrayList<Roi>();
 		peaks = new ArrayList<RefinedPeak<Point>>();
 		AllSelectedrois = new ArrayList<Pair<Integer, Roi>>();
@@ -424,7 +426,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 				Rois = util.FindersUtils.getcurrentRois(newtree);
 
-				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints);
+				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
 
 			
 
@@ -450,12 +452,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 				double newy = rect.y + rect.height/2.0;
 				nearestRoi = new OvalRoi(Util.round(newx - radius), Util.round(newy- radius), Util.round(2 * radius),
 						Util.round(2 * radius));
-				if (ClickedPoints != null)
-					ClickedPoints.clear();
-
-				ClickedPoints.add(new double[] { newx, newy });
 				
 				
+				ClickedPoints.put(0, new double[] { newx, newy });
 				roimanager.addRoi(nearestRoi);
 
 				for (int index = 0; index < centerRoi.size(); ++index) {
@@ -490,7 +489,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
 
-				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints);
+				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
 				
 				
 
@@ -499,6 +498,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 					Roi or = Rois.get(index);
 
 					if (or == nearestRoi) {
+						
 						or.setStrokeColor(colorKDtree);
 
 					} else
@@ -515,11 +515,8 @@ public class InteractiveSingleCell_ implements PlugIn {
 				double newy = rect.y + rect.height/2.0;
 				nearestRoi = new OvalRoi(Util.round(newx - radius), Util.round(newy- radius), Util.round(2 * radius),
 						Util.round(2 * radius));
-				if (ClickedPoints != null)
-					ClickedPoints.clear();
-
-				ClickedPoints.add(new double[] { newx, newy });
-				
+			
+				ClickedPoints.put(0, new double[] { newx, newy });
 				roimanager.addRoi(nearestRoi);
 				for (int index = 0; index < Rois.size(); ++index) {
 					
@@ -1910,10 +1907,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			selectedRoi.setStrokeColor(colorSelect);	
 			overlay.add(selectedRoi);
 			roim.addRoi(selectedRoi);
-			if (ClickedPoints != null)
-				ClickedPoints.clear();
-
-			ClickedPoints.add(new double[] { newx, newy });
+			ClickedPoints.put(0, new double[] { newx, newy });
 			
 
 			
@@ -1953,10 +1947,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				int x = canvas.offScreenX(e.getX());
                 int y = canvas.offScreenY(e.getY());
 
-				if (ClickedPoints != null)
-					ClickedPoints.clear();
-
-				ClickedPoints.add(new double[] { x, y });
+                ClickedPoints.put(0, new double[] { x, y });
 
 				overlay = imp.getOverlay();
 
@@ -2022,10 +2013,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				int x = canvas.offScreenX(e.getX());
                 int y = canvas.offScreenY(e.getY());
 
-				if (ClickedPoints != null)
-					ClickedPoints.clear();
-
-				ClickedPoints.add(new double[] { x, y });
+                ClickedPoints.put(0, new double[] { x, y });
 
 				overlay = imp.getOverlay();
 
@@ -2120,10 +2108,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 					int x = canvas.offScreenX(e.getX());
 	                int y = canvas.offScreenY(e.getY());
 
-					if (ClickedPoints != null)
-						ClickedPoints.clear();
-
-					ClickedPoints.add(new double[] { x, y });
+	                ClickedPoints.put(0, new double[] { x, y });
 
 					overlay = imp.getOverlay();
 
@@ -2190,9 +2175,11 @@ public class InteractiveSingleCell_ implements PlugIn {
 				int x = canvas.offScreenX(e.getX());
                 int y = canvas.offScreenY(e.getY());
 
-                final ArrayList< double[] > loc = new ArrayList<>();
-                loc.add( new double[]{x, y} );
-                nearestRoiCurr = util.FindersUtils.getNearestRois(Rois, loc);
+                final HashMap<Integer,  double[] > loc = new HashMap<Integer, double[]>();
+                
+                loc.put(0, new double[] { x, y });
+                
+                nearestRoiCurr = util.FindersUtils.getNearestRois(Rois, loc.get(0));
                 
                 if ( lastnearest != null && lastnearest!= selectedRoi)
                 	lastnearest.setStrokeColor(colorDraw);
