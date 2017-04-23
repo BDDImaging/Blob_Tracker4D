@@ -426,16 +426,13 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints);
 
-				
-				
-				ArrayList<Roi> KnearestRoi = util.FindersUtils.getKNearestRois(currentimg, Rois, nearestRoi,
-						(int) (Rois.size()));
+			
 
 				ArrayList<double[]> centerRoi = util.FindersUtils.getRoiMean(newtree);
 
-				for (int index = 0; index < KnearestRoi.size(); ++index) {
+				for (int index = 0; index < Rois.size(); ++index) {
 
-					Roi or = KnearestRoi.get(index);
+					Roi or = Rois.get(index);
 
 					if (or == nearestRoi) {
 						or.setStrokeColor(colorKDtree);
@@ -493,14 +490,13 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
 
-				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints);//, currentimg);
+				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints);
 				
-				ArrayList<Roi> KnearestRoi = util.FindersUtils.getKNearestRois(currentimg, Rois, nearestRoi,
-						(int) (Rois.size()));
+				
 
-				for (int index = 0; index < KnearestRoi.size(); ++index) {
+				for (int index = 0; index < Rois.size(); ++index) {
 
-					Roi or = KnearestRoi.get(index);
+					Roi or = Rois.get(index);
 
 					if (or == nearestRoi) {
 						or.setStrokeColor(colorKDtree);
@@ -525,10 +521,13 @@ public class InteractiveSingleCell_ implements PlugIn {
 				ClickedPoints.add(new double[] { newx, newy });
 				
 				roimanager.addRoi(nearestRoi);
-				for (int index = 0; index < peaks.size(); ++index) {
-
-					PointRoi point = new PointRoi(peaks.get(index).getDoublePosition(0),
-							peaks.get(index).getDoublePosition(1));
+				for (int index = 0; index < Rois.size(); ++index) {
+					
+					Roi r = Rois.get(index);
+					 Rectangle rectA = r.getBounds();
+					 
+					PointRoi point = new PointRoi(rectA.x + rectA.width/2.0,
+							rectA.y + rectA.height/2.0);
 					overlay.add(point);
 				}
 
@@ -642,10 +641,13 @@ public class InteractiveSingleCell_ implements PlugIn {
 				roimanager.addRoi(or);
 			}
 
-			for (int index = 0; index < peaks.size(); ++index) {
-
-				PointRoi point = new PointRoi(peaks.get(index).getDoublePosition(0),
-						peaks.get(index).getDoublePosition(1));
+			for (int index = 0; index < Rois.size(); ++index) {
+				
+				Roi r = Rois.get(index);
+				 Rectangle rect = r.getBounds();
+				 
+				PointRoi point = new PointRoi(rect.x + rect.width/2.0,
+						rect.y + rect.height/2.0);
 				overlay.add(point);
 			}
 
@@ -698,22 +700,6 @@ public class InteractiveSingleCell_ implements PlugIn {
 	}
 
 	
-	private boolean Dialogue(){
-		GenericDialog gd = new GenericDialog("Save Results as TXT");
-		
-		
-		gd.addStringField("Choose a Directory to save TXT file:", usefolder);
-		gd.addStringField("Choose a FileName:",  addTrackToName);
-		gd.addStringField("Optionally Name your Cell:", addCellName );
-		
-		usefolder = gd.getNextString();
-		addTrackToName = gd.getNextString();
-		addCellName = gd.getNextString();
-		
-		
-		gd.showDialog();
-		return !gd.wasCanceled();
-	}
 	
 	
 	

@@ -35,6 +35,7 @@ import net.imglib2.algorithm.stats.Normalize;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Pair;
@@ -159,7 +160,6 @@ public class FindersUtils {
 			 
 			 targetCoords.add( new RealPoint(rect.x + rect.width/2.0, rect.y + rect.height/2.0 ) );
 			 
-			//targetCoords.add(new RealPoint(util.FindersUtils.getCenter(currentimg, Allrois.get(index))));
 
 			targetNodes.add(new FlagNode<Roi>(Allrois.get(index)));
 
@@ -218,7 +218,7 @@ public class FindersUtils {
 	public static double[] getCenter(RandomAccessibleInterval<FloatType> source, Roi roi) {
 
 		double Intensity = 0;
-		double[] center = new double[3];
+		double[] center = new double[source.numDimensions()];
 		Cursor<FloatType> currentcursor = Views.iterable(source).localizingCursor();
 		double SumX = 0;
 		double SumY = 0;
@@ -244,7 +244,7 @@ public class FindersUtils {
 		center[0] = SumX / Intensity;
 		center[1] = SumY / Intensity;
 
-		center[2] = 0;
+		
 
 		return center;
 
@@ -303,7 +303,24 @@ public class FindersUtils {
 		return totalimg;
 
 	}
+	public static <T extends RealType<T>> double[] Transformback(double[] location, double[] size, double[] min,
+			double[] max) {
 
+		int n = location.length;
+
+		double[] delta = new double[n];
+
+		final double[] realpos = new double[n];
+
+		for (int d = 0; d < n; ++d){
+			
+			delta[d] = (max[d] - min[d]) / size[d];
+		    
+			realpos[d] = (location[d] - min[d]) / delta[d];
+		}
+		return realpos;
+
+	}
 	/**
 	 * Extract the current 2d region of interest from the souce image
 	 * 
@@ -322,9 +339,41 @@ public class FindersUtils {
 		RandomAccessibleInterval<FloatType> totalimg = factory.create(intervalView, type);
 
 		final RandomAccessibleInterval<FloatType> img = Views.interval(intervalView, interval);
-		totalimg = Views.interval(Views.extendBorder(img), intervalView);
+		double[] newmin = Transformback(new double[]{img.min(0), img.min(1)}, 
+				new double[]{totalimg.dimension(0), totalimg.dimension(1)},
+				new double[]{img.min(0), img.min(1)},
+				new double[]{img.max(0), img.max(1)});
+		
+		double[] newmax = Transformback(new double[]{img.max(0), img.max(1)}, 
+				new double[]{totalimg.dimension(0), totalimg.dimension(1)},
+				new double[]{totalimg.min(0), totalimg.min(1)},
+				new double[]{totalimg.max(0), totalimg.max(1)});
+		long[] newminlong = new long[]{Math.round(newmin[0]), Math.round(newmin[1])};
+		long[] newmaxlong = new long[]{Math.round(newmax[0]), Math.round(newmax[1])};
+		
+		RandomAccessibleInterval<FloatType> outimg = factory.create(new FinalInterval(newminlong, newmaxlong), type);
+		RandomAccess<FloatType> ranac = outimg.randomAccess();
+		final Cursor<FloatType> cursor = Views.iterable(img).localizingCursor();
+		
+		while(cursor.hasNext()){
+			
+			cursor.fwd();
+			
+			double[] newlocation = Transformback(new double[]{cursor.getDoublePosition(0), cursor.getDoublePosition(1)}, 
+					new double[]{totalimg.dimension(0), totalimg.dimension(1)},
+					new double[]{totalimg.min(0), totalimg.min(1)},
+					new double[]{totalimg.max(0), totalimg.max(1)});
+			long[] newlocationlong = new long[]{Math.round(newlocation[0]), Math.round(newlocation[1])};
+			ranac.setPosition(newlocationlong);
+			ranac.get().set(cursor.get());
+			
+		}
+		
+		
+		
+		//totalimg = Views.interval(Views.extendBorder(img), intervalView);
 
-		return totalimg;
+		return outimg;
 	}
 
 	/**
