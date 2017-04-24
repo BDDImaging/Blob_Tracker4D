@@ -189,6 +189,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	RandomAccessibleInterval<FloatType> currentimg;
 	FinalInterval interval;
 	Roi nearestRoi;
+	Roi nearestoriginalRoi;
 	Color colorSelect = Color.red;
 	Color coloroutSelect = Color.CYAN;
 	Color colorCreate = Color.red;
@@ -436,7 +437,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 				Rois = util.FindersUtils.getcurrentRois(newtree);
 
-				nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
+				nearestoriginalRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
 
 			
 
@@ -446,7 +447,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 					Roi or = Rois.get(index);
 
-					if (or == nearestRoi) {
+					if (or == nearestoriginalRoi) {
 						or.setStrokeColor(colorKDtree);
 
 					} else
@@ -456,7 +457,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 					
 				}
-				Rectangle rect = nearestRoi.getBounds();
+				Rectangle rect = nearestoriginalRoi.getBounds();
 				
 				double newx = rect.x + rect.width/2.0;
 				double newy = rect.y + rect.height/2.0;
@@ -499,7 +500,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
 
-				 nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
+				 nearestoriginalRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
 				
 				
 
@@ -507,7 +508,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 					Roi or = Rois.get(index);
 
-					if (or == nearestRoi) {
+					if (or == nearestoriginalRoi) {
 						
 						or.setStrokeColor(colorKDtree);
 
@@ -519,7 +520,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				}
 				
-	          Rectangle rect = nearestRoi.getBounds();
+	          Rectangle rect = nearestoriginalRoi.getBounds();
 				
 				double newx = rect.x + rect.width/2.0;
 				double newy = rect.y + rect.height/2.0;
@@ -833,7 +834,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			AllSelectedcenter.clear();
 			AllSelectedrois.clear();
 			overlay.clear();
-			
+			thirdDimensionslider = thirdDimensionsliderInit;
 			updatePreview(ValueChange.THIRDDIM);
 		}
 
@@ -2202,6 +2203,8 @@ public class InteractiveSingleCell_ implements PlugIn {
                 if(lastnearest!=selectedRoi)
                 nearestRoiCurr.setStrokeColor( Color.ORANGE);
 
+                if(nearestoriginalRoi!=null && lastnearest == nearestoriginalRoi)
+                	lastnearest.setStrokeColor( colorKDtree);
                
                 if ( lastnearest != nearestRoiCurr  )
                 	imp.updateAndDraw();
