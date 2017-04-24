@@ -188,7 +188,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	ArrayList<RefinedPeak<Point>> peaks;
 	RandomAccessibleInterval<FloatType> currentimg;
 	FinalInterval interval;
-	
+	Roi nearestRoi;
 	Color colorSelect = Color.red;
 	Color coloroutSelect = Color.CYAN;
 	Color colorCreate = Color.red;
@@ -436,7 +436,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 				Rois = util.FindersUtils.getcurrentRois(newtree);
 
-				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
+				nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
 
 			
 
@@ -499,7 +499,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
 
-				Roi nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
+				 nearestRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
 				
 				
 
@@ -1285,7 +1285,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			ConfirmSelection.addActionListener(new OpenRTListener());
 			
 			thirdDimensionsliderS
-					.addAdjustmentListener(new thirdDimensionsliderListener(timeText, timeMin, thirdDimensionSize));
+					.addAdjustmentListener(new thirdDimensionsliderListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			JumpFrame.addActionListener(
 					new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			JumpBackFrame.addActionListener(
@@ -1303,19 +1303,23 @@ public class InteractiveSingleCell_ implements PlugIn {
 	protected class thirdDimensionsliderListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
+		final Scrollbar timescroll;
 
-		public thirdDimensionsliderListener(final Label label, final float min, final float max) {
+		public thirdDimensionsliderListener(final Scrollbar timescroll, final Label label, final float min, final float max) {
 			this.label = label;
 			this.min = min;
 			this.max = max;
+			this.timescroll = timescroll;
 		}
 
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
 
-			thirdDimensionslider = (int) util.ScrollbarUtils.computeIntValueFromScrollbarPosition(event.getValue(), min,
-					max, scrollbarSize);
-			label.setText("Time in framenumber = " + thirdDimensionslider);
+			timescroll.setValue((int)util.ScrollbarUtils.computeIntValueFromScrollbarPosition(thirdDimension, min,
+					max, scrollbarSize));
+			
+			thirdDimensionslider = timescroll.getValue();
+			label.setText("Time in framenumber = " + thirdDimensionslider + "/" + thirdDimensionSize);
 
 			thirdDimension = thirdDimensionslider;
 
@@ -1885,7 +1889,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			ConfirmSelection.addActionListener(new OpenRTListener());
 		
 			thirdDimensionsliderS
-					.addAdjustmentListener(new thirdDimensionsliderListener(timeText, timeMin, thirdDimensionSize));
+					.addAdjustmentListener(new thirdDimensionsliderListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			JumpFrame.addActionListener(
 					new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			JumpBackFrame.addActionListener(
@@ -2198,6 +2202,7 @@ public class InteractiveSingleCell_ implements PlugIn {
                 if(lastnearest!=selectedRoi)
                 nearestRoiCurr.setStrokeColor( Color.ORANGE);
 
+               
                 if ( lastnearest != nearestRoiCurr  )
                 	imp.updateAndDraw();
 
@@ -2308,7 +2313,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			ConfirmSelection.addActionListener(new OpenRTListener());
 		
 			thirdDimensionsliderS
-					.addAdjustmentListener(new thirdDimensionsliderListener(timeText, timeMin, thirdDimensionSize));
+					.addAdjustmentListener(new thirdDimensionsliderListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			JumpFrame.addActionListener(
 					new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			JumpBackFrame.addActionListener(
@@ -2442,7 +2447,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			ConfirmSelection.addActionListener(new OpenRTListener());
 		
 			thirdDimensionsliderS
-					.addAdjustmentListener(new thirdDimensionsliderListener(timeText, timeMin, thirdDimensionSize));
+					.addAdjustmentListener(new thirdDimensionsliderListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			JumpFrame.addActionListener(
 					new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 			JumpBackFrame.addActionListener(
