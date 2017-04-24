@@ -118,10 +118,10 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 	Roi nearestRoiCurr;
 	ArrayList<Manualoutput> resultlist = new ArrayList<Manualoutput>();
-	float radius = 5f;
-	float radiusMin = 5f;
-	float radiusMax = 100f;
-	int radiusInit = 5;
+	float radius = 50f;
+	float radiusMin = 1f;
+	float radiusMax = 30f;
+	int radiusInit = 200;
 
 	ArrayList<Pair<Integer, Roi>> AllSelectedrois;
 	ArrayList<Pair<Integer, double[]>> AllSelectedcenter;
@@ -279,6 +279,12 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 	}
 
+	public void setradius(final float radius) {
+
+		this.radius = radius;
+
+	}
+	
 	public void setThreshold(final float value) {
 		threshold = value;
 		thresholdInit = util.ScrollbarUtils.computeScrollbarPositionFromValue(threshold, thresholdMin, thresholdMax,
@@ -316,6 +322,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 		setthresholdMin(thresholdMin);
 		setthresholdMax(thresholdMax);
 		setThreshold(threshold / 40);
+		
 
 		// Get local Minima in scale space to get Max rho-theta points
 		float minPeakValue = houghval;
@@ -326,6 +333,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 		thresholdMin = (float) (0);
 
+		
+		
+		
 		Card();
 		// add listener to the imageplus slice slider
 		sliceObserver = new SliceObserver(imp, new ImagePlusListener());
@@ -565,9 +575,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				isComputing = false;
 				return;
 			}
-			roimanager.close();
-
-			roimanager = new RoiManager();
+		
 
 			IJ.log(" Computing the Component tree");
 
@@ -609,9 +617,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				isComputing = false;
 				return;
 			}
-			roimanager.close();
-
-			roimanager = new RoiManager();
+			
 
 			final DogDetection.ExtremaType type;
 
@@ -727,6 +733,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 		final GridBagLayout layout = new GridBagLayout();
 		final GridBagConstraints c = new GridBagConstraints();
 
+		panelFirst.removeAll();
 		panelFirst.setLayout(layout);
 
 		final Label Name = new Label("Step 1", Label.CENTER);
@@ -792,6 +799,8 @@ public class InteractiveSingleCell_ implements PlugIn {
 			}
 		}));
 
+		panelFirst.repaint();
+		panelFirst.validate();
 		Cardframe.add(panelCont, BorderLayout.CENTER);
 		Cardframe.add(control, BorderLayout.SOUTH);
 		Cardframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -818,11 +827,13 @@ public class InteractiveSingleCell_ implements PlugIn {
 		public void actionPerformed(final ActionEvent arg0) {
 
 			thirdDimension = thirdDimensionsliderInit;
+			thirdDimensionScroll.setValue(thirdDimension);
 			prestack = new ImageStack((int) originalimgA.dimension(0), (int) originalimgA.dimension(1),
 					java.awt.image.ColorModel.getRGBdefault());
 			AllSelectedcenter.clear();
 			AllSelectedrois.clear();
 			overlay.clear();
+			
 			updatePreview(ValueChange.THIRDDIM);
 		}
 
