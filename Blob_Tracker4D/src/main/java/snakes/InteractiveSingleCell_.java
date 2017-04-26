@@ -124,6 +124,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	int radiusInit = 200;
 
 	ArrayList<Pair<Integer, Roi>> AllSelectedrois;
+	HashMap<Integer, Roi> AllOldrois;
 	ArrayList<Pair<Integer, double[]>> AllSelectedcenter;
 	public float minDiversity = 1;
 	// steps per octave
@@ -153,6 +154,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	boolean showDOG = false;
 	boolean enableSigma2 = false;
 	boolean darktobright = false;
+	boolean goingback;
 	float delta = 1f;
 	public float maxVar = 1;
 	float deltaMax = 400f;
@@ -195,6 +197,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	Color colorCreate = Color.red;
 	Color colorDraw = Color.green;
 	Color colorKDtree = Color.blue;
+	Color colorOld = Color.MAGENTA;
 	Color colorPrevious = Color.gray;
 	Color colorFinal = Color.YELLOW;
 	Color colorRadius = Color.yellow;
@@ -299,6 +302,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 		Rois = new ArrayList<Roi>();
 		peaks = new ArrayList<RefinedPeak<Point>>();
 		AllSelectedrois = new ArrayList<Pair<Integer, Roi>>();
+		AllOldrois = new HashMap<Integer, Roi>();
 		AllSelectedcenter = new ArrayList<Pair<Integer, double[]>>();
 
 		if (originalimgA.numDimensions() != 3) {
@@ -438,7 +442,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				Rois = util.FindersUtils.getcurrentRois(newtree);
 
 				nearestoriginalRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
-
+				
 			
 
 				ArrayList<double[]> centerRoi = util.FindersUtils.getRoiMean(newtree);
@@ -457,12 +461,25 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 					
 				}
+				
+			
+					
+						
+					
+				
 				Rectangle rect = nearestoriginalRoi.getBounds();
 				
 				double newx = rect.x + rect.width/2.0;
 				double newy = rect.y + rect.height/2.0;
 				nearestRoi = new OvalRoi(Util.round(newx - radius), Util.round(newy- radius), Util.round(2 * radius),
 						Util.round(2 * radius));
+				if (goingback && AllSelectedrois.size() > 0){
+					nearestRoi = AllSelectedrois.get(AllSelectedrois.size() - 1).getB();
+				
+					 newx = AllSelectedcenter.get(AllSelectedcenter.size() - 1).getB()[0];
+					 newy = AllSelectedcenter.get(AllSelectedcenter.size() - 1).getB()[1];
+					
+				}
 				
 				
 				ClickedPoints.put(0, new double[] { newx, newy });
@@ -479,6 +496,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			if (showDOG) {
 
 				for (int index = 0; index < AllSelectedrois.size(); ++index) {
+
 
 					Roi oldroi = AllSelectedrois.get(index).getB();
 					oldroi.setStrokeColor(colorPrevious);
@@ -502,17 +520,24 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				 nearestoriginalRoi = util.FindersUtils.getNearestRois(Rois, ClickedPoints.get(0));
 				
+					
 				
 
 				for (int index = 0; index < Rois.size(); ++index) {
 
 					Roi or = Rois.get(index);
-
+					
+					
 					if (or == nearestoriginalRoi) {
 						
 						or.setStrokeColor(colorKDtree);
 
-					} else
+					} 
+					
+				
+					
+					
+					else
 
 						or.setStrokeColor(colorDraw);
 					overlay.add(or);
@@ -520,13 +545,21 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				}
 				
+				
 	          Rectangle rect = nearestoriginalRoi.getBounds();
 				
 				double newx = rect.x + rect.width/2.0;
 				double newy = rect.y + rect.height/2.0;
 				nearestRoi = new OvalRoi(Util.round(newx - radius), Util.round(newy- radius), Util.round(2 * radius),
 						Util.round(2 * radius));
-			
+				if (goingback && AllSelectedrois.size() > 0){
+					nearestRoi = AllSelectedrois.get(AllSelectedrois.size() - 1).getB();
+				
+					 newx = AllSelectedcenter.get(AllSelectedcenter.size() - 1).getB()[0];
+					 newy = AllSelectedcenter.get(AllSelectedcenter.size() - 1).getB()[1];
+					
+				}
+				 
 				ClickedPoints.put(0, new double[] { newx, newy });
 				roimanager.addRoi(nearestRoi);
 				for (int index = 0; index < Rois.size(); ++index) {
@@ -592,9 +625,10 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				or.setStrokeColor(colorDraw);
 				overlay.add(or);
+				
 				roimanager.addRoi(or);
 			}
-
+			DisplayTracked();
 			for (int index = 0; index < centerRoi.size(); ++index) {
 
 				PointRoi point = new PointRoi(centerRoi.get(index)[0], centerRoi.get(index)[1]);
@@ -641,9 +675,15 @@ public class InteractiveSingleCell_ implements PlugIn {
 				Roi or = Rois.get(index);
 
 				or.setStrokeColor(colorDraw);
+				
+				
+				
+				
 				overlay.add(or);
 				roimanager.addRoi(or);
 			}
+			
+			DisplayTracked();
 
 			for (int index = 0; index < Rois.size(); ++index) {
 				
@@ -703,7 +743,16 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 	}
 
-	
+	public void DisplayTracked(){
+		
+		if (AllOldrois.size() > 0){
+			Roi or = AllOldrois.get(thirdDimensionsliderInit);
+			or.setStrokeColor(colorOld);
+			or.setStrokeWidth(5);
+			overlay.add(or);
+			}
+				
+	}
 	
 	
 	
@@ -831,11 +880,25 @@ public class InteractiveSingleCell_ implements PlugIn {
 			thirdDimensionScroll.setValue(thirdDimension);
 			prestack = new ImageStack((int) originalimgA.dimension(0), (int) originalimgA.dimension(1),
 					java.awt.image.ColorModel.getRGBdefault());
+			
+			overlay.clear();
+			
+			for (int index = 0; index < AllSelectedrois.size(); ++index){
+				
+				AllOldrois.put(AllSelectedrois.get(index).getA(), AllSelectedrois.get(index).getB());
+			}
+			
+			
+			
 			AllSelectedcenter.clear();
 			AllSelectedrois.clear();
-			overlay.clear();
+			
+			
 			thirdDimensionslider = thirdDimensionsliderInit;
+			CurrentView = util.FindersUtils.getCurrentView(originalimgA, thirdDimension);
 			updatePreview(ValueChange.THIRDDIM);
+			
+			
 		}
 
 	}
@@ -1316,6 +1379,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
 
+			goingback = false;
 			timescroll.setValue((int)util.ScrollbarUtils.computeIntValueFromScrollbarPosition(thirdDimension, min,
 					max, scrollbarSize));
 			
@@ -1398,6 +1462,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
+			goingback = false;
 			RoiManager roimanager = RoiManager.getInstance();
 			Roi[] RoisOrig = roimanager.getRoisAsArray();
 
@@ -1526,7 +1591,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			CurrentView = util.FindersUtils.getCurrentView(originalimgA, thirdDimension);
 		
 			
-
+           goingback = true;
 
 			updatePreview(ValueChange.THIRDDIM);
 
@@ -1613,6 +1678,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			
 			ClickMouseBackTrack();
 			updatePreview(ValueChange.THIRDDIMTrack);
+			
 			isStarted = true;
 		
 			// check whenever roi is modified to update accordingly
@@ -1922,6 +1988,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 					Util.round(2 * radius));
 			selectedRoi.setStrokeColor(colorSelect);	
 			overlay.add(selectedRoi);
+			
 			roim.addRoi(selectedRoi);
 			ClickedPoints.put(0, new double[] { newx, newy });
 			
@@ -2200,11 +2267,13 @@ public class InteractiveSingleCell_ implements PlugIn {
                 if ( lastnearest != null && lastnearest!= selectedRoi)
                 	lastnearest.setStrokeColor(colorDraw);
                 
-                if(lastnearest!=selectedRoi)
+                if(lastnearest!=selectedRoi )
                 nearestRoiCurr.setStrokeColor( Color.ORANGE);
 
                 if(nearestoriginalRoi!=null && lastnearest == nearestoriginalRoi)
                 	lastnearest.setStrokeColor( colorKDtree);
+               
+                
                
                 if ( lastnearest != nearestRoiCurr  )
                 	imp.updateAndDraw();
