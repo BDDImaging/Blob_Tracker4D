@@ -212,11 +212,12 @@ public class InteractiveSingleCell_ implements PlugIn {
 	MserTree<UnsignedByteType> newtree;
 	RandomAccessibleInterval<UnsignedByteType> newimg;
 
+	int cellcount = 0;
 	public Rectangle standardRectangle;
 	RandomAccessibleInterval<FloatType> originalimgA;
 	int length = 0;
 	int height = 0;
-
+    int maxghost = 5;
 	int radiusSliderinit = 5;
 
 	public InteractiveSingleCell_() {
@@ -375,7 +376,6 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 
 		if (change == ValueChange.THIRDDIM) {
-			System.out.println("Current Time point: " + thirdDimension);
 
 			if ( imp == null )
 				imp = ImageJFunctions.show(CurrentView);
@@ -431,13 +431,32 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 			if (showMSER) {
 
-				for (int index = 0; index < AllSelectedrois.size(); ++index) {
+				if (AllSelectedrois.size() <= maxghost){
+					for (int index = 0; index < AllSelectedrois.size(); ++index) {
 
-					Roi oldroi = AllSelectedrois.get(index).getB();
-					oldroi.setStrokeColor(colorPrevious);
-					overlay.add(oldroi);
+						Roi oldroi = AllSelectedrois.get(index).getB();
+						oldroi.setStrokeColor(colorPrevious);
+						overlay.add(oldroi);
 
-				}
+					}
+					}
+					else{
+						for (int index = 0; index < AllSelectedrois.size(); ++index) {
+							Roi roi = AllSelectedrois.get(index).getB();
+						overlay.remove(roi);
+
+						}
+						for (int index = AllSelectedrois.size() - maxghost - 1; index < AllSelectedrois.size(); ++index){
+							
+							Roi oldroi = AllSelectedrois.get(index).getB();
+							oldroi.setStrokeColor(colorPrevious);
+							
+							overlay.add(oldroi);
+							
+							
+						}
+						
+					}
 				newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 				Rois = util.FindersUtils.getcurrentRois(newtree);
 
@@ -495,13 +514,32 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 			if (showDOG) {
 
+				
+				if (AllSelectedrois.size() <= maxghost){
 				for (int index = 0; index < AllSelectedrois.size(); ++index) {
-
 
 					Roi oldroi = AllSelectedrois.get(index).getB();
 					oldroi.setStrokeColor(colorPrevious);
 					overlay.add(oldroi);
 
+				}
+				}
+				else{
+					for (int index = 0; index < AllSelectedrois.size(); ++index) {
+						Roi roi = AllSelectedrois.get(index).getB();
+					overlay.remove(roi);
+
+					}
+					for (int index = AllSelectedrois.size() - maxghost - 1; index < AllSelectedrois.size(); ++index){
+						
+						Roi oldroi = AllSelectedrois.get(index).getB();
+						oldroi.setStrokeColor(colorPrevious);
+						
+						overlay.add(oldroi);
+						
+						
+					}
+					
 				}
 
 				final DogDetection.ExtremaType type;
@@ -746,10 +784,12 @@ public class InteractiveSingleCell_ implements PlugIn {
 	public void DisplayTracked(){
 		
 		if (AllOldrois.size() > 0){
-			Roi or = AllOldrois.get(thirdDimensionsliderInit);
+			for (int index = 1; index <= cellcount; ++index){
+			Roi or = AllOldrois.get(index);
 			or.setStrokeColor(colorOld);
 			or.setStrokeWidth(5);
 			overlay.add(or);
+			}
 			}
 				
 	}
@@ -876,6 +916,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
+			
 			thirdDimension = thirdDimensionsliderInit;
 			thirdDimensionScroll.setValue(thirdDimension);
 			prestack = new ImageStack((int) originalimgA.dimension(0), (int) originalimgA.dimension(1),
@@ -885,7 +926,14 @@ public class InteractiveSingleCell_ implements PlugIn {
 			
 			for (int index = 0; index < AllSelectedrois.size(); ++index){
 				
-				AllOldrois.put(AllSelectedrois.get(index).getA(), AllSelectedrois.get(index).getB());
+				if (AllSelectedrois.get(index).getA() == thirdDimensionsliderInit){
+				
+					cellcount++;
+					AllOldrois.put(cellcount, AllSelectedrois.get(index).getB());
+				
+				}
+				
+				else break;
 			}
 			
 			
@@ -1397,14 +1445,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				thirdDimension = thirdDimensionSize;
 			}
 
-			Roi roi = imp.getRoi();
-			if (roi == null) {
-				// IJ.log( "A rectangular ROI is required to define the
-				// area..."
-				// );
-				imp.setRoi(standardRectangle);
-				roi = imp.getRoi();
-			}
+			
 
 			CurrentView = util.FindersUtils.getCurrentView(originalimgA, thirdDimension);
 
@@ -1538,14 +1579,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 			imp = WindowManager.getCurrentImage();
 
-			Roi roi = imp.getRoi();
-			if (roi == null) {
-				// IJ.log( "A rectangular ROI is required to define the
-				// area..."
-				// );
-				imp.setRoi(standardRectangle);
-				roi = imp.getRoi();
-			}
+		
 			RoiManager roim = RoiManager.getInstance();
 			if (roim.getRoisAsArray()!=null)
 				roim.runCommand("Delete");
@@ -1664,14 +1698,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 			imp = WindowManager.getCurrentImage();
 
-			Roi roi = imp.getRoi();
-			if (roi == null) {
-				// IJ.log( "A rectangular ROI is required to define the
-				// area..."
-				// );
-				imp.setRoi(standardRectangle);
-				roi = imp.getRoi();
-			}
+			
 			RoiManager roim = RoiManager.getInstance();
 			if (roim.getRoisAsArray()!=null)
 				roim.runCommand("Delete");
@@ -2962,7 +2989,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	public static void main(String[] args) {
 
 		new ImageJ();
-		new ImagePlus( "/Users/varunkapoor/Documents/Pierre_data/New_data_Feb/Bio-1.tif" ).show();; 
+		new ImagePlus( "/Users/varunkapoor/Documents/Test_Data/Bio-1.tif" ).show();
 
 		JFrame frame = new JFrame("");
 		SimpleFileChooser panel = new SimpleFileChooser();
