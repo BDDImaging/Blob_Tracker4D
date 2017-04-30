@@ -65,6 +65,7 @@ import ij.gui.Overlay;
 import ij.gui.PointRoi;
 import ij.gui.PolygonRoi;
 import ij.gui.Roi;
+import ij.io.FileSaver;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
@@ -124,6 +125,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	int radiusInit = 200;
 
 	ArrayList<Pair<Integer, Roi>> AllSelectedrois;
+	ArrayList<Pair<Integer, Roi>> AllSelectedoldrois;
 	HashMap<Integer, Roi> AllOldrois;
 	ArrayList<Pair<Integer, double[]>> AllSelectedcenter;
 	public float minDiversity = 1;
@@ -173,6 +175,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	float minDiversityMax = 1;
 	int thirdDimensionslider = 1;
 	int thirdDimensionsliderInit = 1;
+	
 	HashMap<Integer, double[]> ClickedPoints = new HashMap<Integer, double[]>();
 	int timeMin = 1;
 	long minSize = 1;
@@ -201,7 +204,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	Color colorPrevious = Color.gray;
 	Color colorFinal = Color.YELLOW;
 	Color colorRadius = Color.yellow;
-	
+	boolean savefile;
 	Roi selectedRoi;
 	
 	ImagePlus imp;
@@ -303,6 +306,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 		Rois = new ArrayList<Roi>();
 		peaks = new ArrayList<RefinedPeak<Point>>();
 		AllSelectedrois = new ArrayList<Pair<Integer, Roi>>();
+		AllSelectedoldrois = new ArrayList<Pair<Integer, Roi>>();
 		AllOldrois = new HashMap<Integer, Roi>();
 		AllSelectedcenter = new ArrayList<Pair<Integer, double[]>>();
 
@@ -484,7 +488,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			
 					
 						
-					
+				DisplayTracked();
 				
 				Rectangle rect = nearestoriginalRoi.getBounds();
 				
@@ -560,7 +564,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				
 					
 				
-
+				 DisplayTracked();
 				for (int index = 0; index < Rois.size(); ++index) {
 
 					Roi or = Rois.get(index);
@@ -783,14 +787,20 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 	public void DisplayTracked(){
 		
-		if (AllOldrois.size() > 0){
-			for (int index = 1; index <= cellcount; ++index){
-			Roi or = AllOldrois.get(index);
-			or.setStrokeColor(colorOld);
-			or.setStrokeWidth(5);
-			overlay.add(or);
+		
+		for (int index = 0; index < AllSelectedoldrois.size(); ++index){
+			
+			Roi or = AllSelectedoldrois.get(index).getB();
+			if (AllSelectedoldrois.get(index).getA() == thirdDimension){
+				or.setStrokeColor(colorOld);
+				or.setStrokeWidth(3);
+				overlay.add(or);
+				
 			}
-			}
+			
+		}
+		
+	
 				
 	}
 	
@@ -818,7 +828,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 		final Checkbox mser = new Checkbox("MSER", Finders, findBlobsViaMSER);
 		final Checkbox dog = new Checkbox("DoG", Finders, findBlobsViaDOG);
-        final Checkbox Filesaver = new Checkbox("Save results as TXT file (optional)");
+        final Checkbox Filesaver = new Checkbox("Save results to file (optional)");
 		final JButton Reset = new JButton("Restart");
 		final GridBagLayout layout = new GridBagLayout();
 		final GridBagConstraints c = new GridBagConstraints();
@@ -936,16 +946,25 @@ public class InteractiveSingleCell_ implements PlugIn {
 				else break;
 			}
 			
-			
+			AllSelectedoldrois.addAll(AllSelectedrois);
 			
 			AllSelectedcenter.clear();
 			AllSelectedrois.clear();
 			
 			
 			thirdDimensionslider = thirdDimensionsliderInit;
+			thirdDimension = thirdDimensionsliderInit;
+			
 			CurrentView = util.FindersUtils.getCurrentView(originalimgA, thirdDimension);
 			updatePreview(ValueChange.THIRDDIM);
+			CardLayout cl = (CardLayout) panelCont.getLayout();
+			cl.next(panelCont);
 			
+			new DisplayBlobsListener().actionPerformed(null);
+			if(showDOG)
+				updatePreview(ValueChange.SHOWDOG);
+			if(showMSER)
+				updatePreview(ValueChange.SHOWMSER);
 			
 		}
 
@@ -1110,10 +1129,10 @@ public class InteractiveSingleCell_ implements PlugIn {
 		
 		@Override
 		public void itemStateChanged(final ItemEvent arg0) {
-
-			
+			if (arg0.getStateChange() == ItemEvent.DESELECTED)
+			    savefile = false;
 			if (arg0.getStateChange() == ItemEvent.SELECTED){
-				
+				savefile = true;
 				panelFirst.removeAll();
 				CheckboxGroup Finders = new CheckboxGroup();
 				final Checkbox mser = new Checkbox("MSER", Finders, findBlobsViaMSER);
@@ -1518,6 +1537,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				o.clear();
 
+				
 				for (int index = 0; index < RoisOrig.length; ++index) {
 
 					double[] center = util.FindersUtils.getCenter(currentimg, RoisOrig[index]);
@@ -1807,7 +1827,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				
 
-				if (displayoverlay) {
+				
 
 					if (AllSelectedrois.get(index).getA() == i){
 					cp.setColor(colorFinal);
@@ -1827,7 +1847,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 						cp.draw(lineor);
 						
 						
-					}
+					
 
 					if (prestack != null)
 						prestack.setPixels(cp.getPixels(), i);
@@ -1840,13 +1860,21 @@ public class InteractiveSingleCell_ implements PlugIn {
 			
 			}
 			
-			if (displayoverlay)
+			
 				new ImagePlus("Overlays", prestack).show();
 			Localimp.close();
-			prestack = new ImageStack((int) originalimgA.dimension(0), (int) originalimgA.dimension(1),
-					java.awt.image.ColorModel.getRGBdefault());
+			
+		
+			
 			NumberFormat nf = NumberFormat.getInstance(Locale.ENGLISH);
 			nf.setMaximumFractionDigits(3);
+			
+			if(savefile){
+				
+				final FileSaver savetrack = new FileSaver(new ImagePlus("Track" + addCellName, prestack));
+				savetrack.saveAsTiff(
+						usefolder + "//" + addTrackToName + "" + addCellName + ".tiff");
+				
 			try {
 
 				File fichier = new File(
@@ -1872,11 +1900,6 @@ public class InteractiveSingleCell_ implements PlugIn {
 						);
 				
 				
-				
-				
-				
-				
-				
 			}
 				
 				
@@ -1886,7 +1909,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 		} catch (IOException e) {
 		}
-			
+			}
+			prestack = new ImageStack((int) originalimgA.dimension(0), (int) originalimgA.dimension(1),
+					java.awt.image.ColorModel.getRGBdefault());
 			
 		}
 	}
