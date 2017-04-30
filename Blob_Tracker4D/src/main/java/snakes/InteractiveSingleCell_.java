@@ -877,7 +877,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				thirdDimensionSize);
 		thirdDimensionslider = (int) util.ScrollbarUtils.computeValueFromScrollbarPosition(thirdDimensionsliderInit,
 				timeMin, thirdDimensionSize, thirdDimensionSize);
-		Reset.addActionListener(new ResetListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+		Reset.addActionListener(new ResetListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize, null, null));
 
 	
 
@@ -915,18 +915,30 @@ public class InteractiveSingleCell_ implements PlugIn {
 		final float min, max;
 		Label timeText;
 		final Scrollbar thirdDimensionScroll;
-
-		public ResetListener(Scrollbar thirdDimensionScroll, Label timeText, float min, float max) {
+		final TextField filename;
+		final TextField Cellname;
+		public ResetListener(Scrollbar thirdDimensionScroll, Label timeText, float min, float max, TextField filename, TextField Cellname) {
 			this.thirdDimensionScroll = thirdDimensionScroll;
 			this.min = min;
 			this.max = max;
+			this.filename = filename;
+			this.Cellname = Cellname;
 			this.timeText = timeText;
 		}
+			
 
+
+
+
+				
+
+			
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
-			
+
+			addTrackToName = filename.getText();
+			addCellName = Cellname.getText();
 			thirdDimension = thirdDimensionsliderInit;
 			thirdDimensionScroll.setValue(thirdDimension);
 			prestack = new ImageStack((int) originalimgA.dimension(0), (int) originalimgA.dimension(1),
@@ -961,6 +973,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			cl.next(panelCont);
 			
 			new DisplayBlobsListener().actionPerformed(null);
+			
 			if(showDOG)
 				updatePreview(ValueChange.SHOWDOG);
 			if(showMSER)
@@ -1210,7 +1223,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 					thirdDimensionSize);
 			thirdDimensionslider = (int) util.ScrollbarUtils.computeValueFromScrollbarPosition(thirdDimensionsliderInit,
 					timeMin, thirdDimensionSize, thirdDimensionSize);
-			Reset.addActionListener(new ResetListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+			Reset.addActionListener(new ResetListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize,inputField, inputFieldName));
 
 			ChooseWorkspace.addActionListener(new ChooseWorkspaceListener(inputField, inputFieldName));
 			//Confirm.addActionListener(new ConfirmWorkspaceListener(inputField, inputFieldName));
@@ -1823,12 +1836,6 @@ public class InteractiveSingleCell_ implements PlugIn {
 			
 			for (int index = 0; index < AllSelectedrois.size(); ++index) {
 
-			
-
-				
-
-				
-
 					if (AllSelectedrois.get(index).getA() == i){
 					cp.setColor(colorFinal);
 
@@ -1957,7 +1964,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			final Button JumpFrame = new Button("Confirm and Go to Next Frame");
 			final Button SkipFrame = new Button("No good Cell found, Skip this Time Frame");
 			final Button JumpBackFrame = new Button("Go back a Time Frame to unselect");
-			final Button Done = new Button("Display Tracks");
+			final Button Done = new Button("Display Tracks and Save results");
 			final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
 			final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
 					thirdDimensionSize);
@@ -2387,7 +2394,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			final Button JumpFrame = new Button("Confirm and Go to Next Time Frame");
 			final Button SkipFrame = new Button("No good Cell found, Skip this Time Frame");
 			final Button JumpBackFrame = new Button("Go back a Time Frame to unselect");
-			final Button Done = new Button("Display Tracks");
+			final Button Done = new Button("Display Tracks and Save results");
 			final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
 			final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
 					thirdDimensionSize);
