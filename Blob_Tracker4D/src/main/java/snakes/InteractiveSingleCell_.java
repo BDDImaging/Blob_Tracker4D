@@ -937,8 +937,12 @@ public class InteractiveSingleCell_ implements PlugIn {
 		public void actionPerformed(final ActionEvent arg0) {
 
 
+			if(savefile){
 			addTrackToName = filename.getText();
 			addCellName = Cellname.getText();
+			}
+			
+			
 			thirdDimension = thirdDimensionsliderInit;
 			thirdDimensionScroll.setValue(thirdDimension);
 			prestack = new ImageStack((int) originalimgA.dimension(0), (int) originalimgA.dimension(1),
@@ -1890,12 +1894,12 @@ public class InteractiveSingleCell_ implements PlugIn {
 				FileWriter fw = new FileWriter(fichier);
 				BufferedWriter bw = new BufferedWriter(fw);
 				
-				bw.write("\t\tCellName\tFrameNumber\tLocationX (px)\tLocationY (px)\tIntensity\tNumberofPixels\tMeanIntensity\tradius \n ");
+				bw.write("\t\tCellName\tFrameNumber\tLocationX (px)\tLocationY (px)\tIntensity\tNumberofPixels\t\tMeanIntensity\t\tradius \n ");
 			
 			for (int index = 0 ; index < resultlist.size(); ++index){
 				
-				
-				bw.write("\t" + resultlist.get(index).CellName + "\t" + "\t"
+				if(resultlist.get(index).CellName == addCellName){
+				bw.write("\t" + "\t"  + resultlist.get(index).CellName + "\t" + "\t"
 				              + nf.format(resultlist.get(index).Framenumber)+ "\t" + "\t"
 				              + nf.format(resultlist.get(index).location[0])+ "\t" + "\t"
 				              + nf.format(resultlist.get(index).location[1])+ "\t" + "\t"
@@ -1906,7 +1910,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				              
 						);
 				
-				
+				}
 			}
 				
 				
