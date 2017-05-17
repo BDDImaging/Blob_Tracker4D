@@ -1,13 +1,26 @@
 package util;
 
+import java.awt.Font;
 import java.awt.Rectangle;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFCellStyle;
+import org.apache.poi.hssf.usermodel.HSSFDataFormat;
+import org.apache.poi.hssf.usermodel.HSSFFont;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.jgrapht.graph.DefaultWeightedEdge;
 
 import blobfinder.SortListbyproperty;
@@ -15,6 +28,7 @@ import ij.ImagePlus;
 import ij.gui.EllipseRoi;
 import ij.gui.OvalRoi;
 import ij.gui.Roi;
+import ij.measure.ResultsTable;
 import kdTreeBlobs.FlagNode;
 import kdTreeBlobs.NNFlagsearchKDtree;
 import mpicbg.imglib.image.Image;
@@ -640,4 +654,77 @@ public class FindersUtils {
 		final EllipseRoi ellipse = new EllipseRoi(x - dx, y - dy, x + dx, y + dy, scale2 / scale1);
 		return ellipse;
 	}
+	
+
+	public void saveResultsToExcel(String xlFile, ResultsTable rt) {
+
+		FileOutputStream xlOut = null;
+		try {
+
+			xlOut = new FileOutputStream(xlFile);
+		} catch (FileNotFoundException ex) {
+
+		}
+
+		HSSFWorkbook xlBook = new HSSFWorkbook();
+		HSSFSheet xlSheet = xlBook.createSheet("Results Object Tracker");
+
+		HSSFRow r = null;
+		HSSFCell c = null;
+		HSSFCellStyle cs = xlBook.createCellStyle();
+		HSSFCellStyle cb = xlBook.createCellStyle();
+		HSSFFont f = xlBook.createFont();
+		HSSFFont fb = xlBook.createFont();
+		HSSFDataFormat df = xlBook.createDataFormat();
+		f.setFontHeightInPoints((short) 12);
+		fb.setFontHeightInPoints((short) 12);
+		fb.setBoldweight((short) Font.BOLD);
+		cs.setFont(f);
+		cb.setFont(fb);
+		cs.setDataFormat(df.getFormat("#,##0.000"));
+		cb.setDataFormat(HSSFDataFormat.getBuiltinFormat("text"));
+		cb.setFont(fb);
+
+		int numRows = rt.size();
+		String[] colHeaders = rt.getHeadings();
+		int rownum = 0;
+
+		// Create a Header
+		r = xlSheet.createRow(rownum);
+
+		for (int cellnum = 0; cellnum < colHeaders.length; cellnum++) {
+
+			c = r.createCell((short) cellnum);
+			c.setCellStyle(cb);
+			c.setCellValue(colHeaders[cellnum]);
+
+		}
+		rownum++;
+
+		for (int row = 0; row < numRows; row++) {
+
+			r = xlSheet.createRow(rownum + row);
+			int numCols = rt.getLastColumn() + 1;
+
+			for (int cellnum = 0; cellnum < numCols; cellnum++) {
+
+				c = r.createCell((short) cellnum);
+
+				c.setCellValue(rt.getValueAsDouble(cellnum, row));
+
+			}
+
+		}
+
+		try {
+			xlBook.write(xlOut);
+			xlOut.close();
+		} catch (IOException ex) {
+
+			
+		}
+
+	}
+
+	
 }

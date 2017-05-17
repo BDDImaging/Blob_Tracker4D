@@ -38,6 +38,7 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -99,6 +100,7 @@ import ij.gui.Overlay;
 import ij.gui.PolygonRoi;
 import ij.gui.ProgressBar;
 import ij.gui.Roi;
+import ij.io.FileSaver;
 import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
@@ -106,6 +108,12 @@ import ij.process.ColorProcessor;
 
 import kdTreeBlobs.FlagNode;
 import kdTreeBlobs.NNFlagsearchKDtree;
+import listeners.DogListener;
+import listeners.MoveInFourthDimListener;
+import listeners.MoveInThirdDimListener;
+import listeners.MserListener;
+import listeners.SegDogListener;
+import listeners.SegMserListener;
 import mpicbg.imglib.image.Image;
 import mpicbg.imglib.multithreading.SimpleMultiThreading;
 import mpicbg.imglib.util.Util;
@@ -135,12 +143,17 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.RealSum;
+import net.imglib2.util.ValuePair;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.NumericComposite;
 import overlaytrack.DisplayGraph;
 import overlaytrack.DisplaymodelGraph;
 import preProcessing.GetLocalmaxmin;
 import segmentation.SegmentbyWatershed;
+import swingClasses.Progress;
+import swingClasses.ProgressAll;
+import swingClasses.ProgressRedo;
+import swingClasses.ProgressSnake;
 import trackerType.BlobTracker;
 import trackerType.KFsearch;
 import trackerType.NNsearch;
@@ -155,162 +168,171 @@ import util.Boundingboxes;
 
 public class InteractiveActiveContour_ implements PlugIn {
 
-	final int scrollbarSize = 1000;
+	public final int scrollbarSize = 1000;
 	/** Store the individual features, and their values. */
 	private final ConcurrentHashMap<String, Double> features = new ConcurrentHashMap<String, Double>();
-	float sigma = 0.5f;
-	float sigma2 = 0.5f;
-	float threshold = 1f;
-	float deltaMin = 0;
+	public float sigma = 0.5f;
+	public float sigma2 = 0.5f;
+	public float threshold = 1f;
+	public float deltaMin = 0;
+	public ColorProcessor cp = null;
+	public ColorProcessor measurecp = null;
 	// steps per octave
 	public static int standardSensitivity = 4;
-	int sensitivity = standardSensitivity;
-	JLabel label = new JLabel("Progress..");
-	JProgressBar jpb;
-	SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph;
-	JFrame frame = new JFrame();
-	JPanel panel = new JPanel();
-	float imageSigma = 0.5f;
-	float sigmaMin = 0.5f;
-	float sigmaMax = 100f;
-	float sizeXMin = 0;
-	float sizeYMin = 0;
+	public int sensitivity = standardSensitivity;
+	public JLabel label = new JLabel("Progress..");
+	public JProgressBar jpb;
+	public SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graph;
+	public JFrame frame = new JFrame();
+	public JPanel panel = new JPanel();
+	public float imageSigma = 0.5f;
+	public float sigmaMin = 0.5f;
+	public float sigmaMax = 100f;
+	public float sizeXMin = 0;
+	public float sizeYMin = 0;
 
-	float sizeXMax = 100f;
-	float sizeYMax = 100f;
-	int sigmaInit = 30;
+	public float sizeXMax = 100f;
+	public float sizeYMax = 100f;
+	public int sigmaInit = 30;
 
-	int displaySelectedTrack;
-	ArrayList<Integer> IDALL = new ArrayList<Integer>();
-	float minDiversityMin = 0;
-	float minDiversityMax = 1;
-	int thirdDimensionslider = 1;
-	int thirdDimensionsliderInit = 1;
-	int timeMin = 1;
-	long minSize = 1;
-	long maxSize = 1000;
-	long minSizemin = 0;
-	long minSizemax = 100;
-	long maxSizemin = 100;
-	long maxSizemax = 10000;
-	int fourthDimensionslider = 1;
-	int fourthDimensionsliderInit = 1;
-	int sliceMin = 1;
-	ArrayList<Roi> SnakeRoisA;
-	ArrayList<Roi> SnakeRoisB;
+	public int displaySelectedTrack;
+	public ArrayList<Integer> IDALL = new ArrayList<Integer>();
+	public float minDiversityMin = 0;
+	public float minDiversityMax = 1;
+	public int thirdDimensionslider = 1;
+	public int thirdDimensionsliderInit = 1;
+	public int timeMin = 1;
+	public long minSize = 1;
+	public long maxSize = 1000;
+	public long minSizemin = 0;
+	public long minSizemax = 100;
+	public long maxSizemin = 100;
+	public long maxSizemax = 10000;
+	public int fourthDimensionslider = 1;
+	public int fourthDimensionsliderInit = 1;
+	public int sliceMin = 1;
+	public ArrayList<Roi> SnakeRoisA;
+	public ArrayList<Roi> SnakeRoisB;
 
 	// ROI original
-	int nbRois;
-	Roi rorig = null;
-	Roi processRoi = null;
-	float thresholdMin = 0f;
-	float thresholdMax = 1f;
-	int thresholdInit = 1;
-	float thresholdHoughMin = 0f;
-	float thresholdHoughMax = 1f;
-	int thresholdHoughInit = 1;
+	public int nbRois;
+	public Roi rorig = null;
+	public Roi processRoi = null;
+	public float thresholdMin = 0f;
+	public float thresholdMax = 1f;
+	public int thresholdInit = 1;
+	public float thresholdHoughMin = 0f;
+	public float thresholdHoughMax = 1f;
+	public int thresholdHoughInit = 1;
 
-	float sizeX = 0;
-	float sizeY = 0;
+	public float sizeX = 0;
+	public float sizeY = 0;
 	public int radius = 1;
 	public float maxVar = 1;
-	int Progressmin = 0;
-	int Progressmax = 100;
-	int max = Progressmax;
+	public int Progressmin = 0;
+	public int Progressmax = 100;
+	public int max = Progressmax;
 	public float minDiversity = 1;
 	public float thresholdHough = 1;
-	FloatType minval = new FloatType(0);
-	FloatType maxval = new FloatType(1);
-	boolean TrackinT = true;
+	public FloatType minval = new FloatType(0);
+	public FloatType maxval = new FloatType(1);
+	public boolean TrackinT = true;
 
-	double minIntensityImage = Double.NaN;
-	double maxIntensityImage = Double.NaN;
-	String usefolder = IJ.getDirectory("imagej");
-	String addTrackToName = "TrackedBlobsID";
-	Color colorDraw = Color.yellow;
-	FinalInterval interval;
-	SliceObserver sliceObserver;
-	RoiListener roiListener;
-	ImagePlus imp;
-	ImagePlus measureimp;
-	boolean darktobright = false;
-	int channel = 0;
-	RandomAccessibleInterval<FloatType> currentimg;
-	RandomAccessibleInterval<FloatType> othercurrentimg;
-	RandomAccessibleInterval<FloatType> originalimgA;
-	RandomAccessibleInterval<FloatType> originalimgB;
-	ImageStack snakestack;
-	ImageStack measuresnakestack;
-
-	ArrayList<double[]> AllmeanCovar;
-	float deltaMax = 400f;
-	float maxVarMin = 0;
-	float maxVarMax = 1;
+	public double minIntensityImage = Double.NaN;
+	public double maxIntensityImage = Double.NaN;
+	public String usefolder = IJ.getDirectory("imagej");
+	public String addTrackToName = "TrackedBlobsID";
+	public FinalInterval interval;
+	public SliceObserver sliceObserver;
+	public RoiListener roiListener;
+	public ImagePlus imp;
+	public ImagePlus measureimp;
+	public boolean darktobright = false;
+	public int channel = 0;
+	public RandomAccessibleInterval<FloatType> currentimg;
+	public RandomAccessibleInterval<FloatType> othercurrentimg;
+	public RandomAccessibleInterval<FloatType> originalimgA;
+	public RandomAccessibleInterval<FloatType> originalimgB;
+	public ImageStack snakestack;
+	public ImageStack measuresnakestack;
+	public HashMap<Integer, ArrayList<Roi>> AllSnakerois = new HashMap<Integer, ArrayList<Roi>>();
+	public HashMap<Integer, ArrayList<Roi>> AllSnakeMeasurerois = new HashMap<Integer, ArrayList<Roi>>();
+	public ArrayList<double[]> AllmeanCovar;
+	public float deltaMax = 400f;
+	public float maxVarMin = 0;
+	public float maxVarMax = 1;
 	private SimpleWeightedGraph<SnakeObject, DefaultWeightedEdge> graphZ;
 	// Dimensions of the stack :
-	float alpha = 0.5f;
-	float beta = 0.5f;
+	public float alpha = 0.5f;
+	public float beta = 0.5f;
 
-	int thirdDimension;
-	int fourthDimension;
+	public int thirdDimension;
+	public int fourthDimension;
 	public int minDiversityInit = 1;
-	int thirdDimensionSize = 0;
-	int fourthDimensionSize = 0;
-	ArrayList<ABSnakeFast> snakeoverlay;
-	ArrayList<SnakeObject> currentsnakes;
-	int length = 0;
-	int height = 0;
-	int sizeXinit = 0;
-	int sizeYinit = 0;
-	RandomAccessibleInterval<FloatType> CurrentView;
-	RandomAccessibleInterval<FloatType> otherCurrentView;
-	ArrayList<RefinedPeak<Point>> peaks;
-	Color originalColor = new Color(0.8f, 0.8f, 0.8f);
-	Color inactiveColor = new Color(0.95f, 0.95f, 0.95f);
+	public int thirdDimensionSize = 0;
+	public int fourthDimensionSize = 0;
+	public ArrayList<ABSnakeFast> snakeoverlay;
+	public ArrayList<SnakeObject> currentsnakes;
+	public int length = 0;
+	public int height = 0;
+	public int sizeXinit = 0;
+	public int sizeYinit = 0;
+	public RandomAccessibleInterval<FloatType> CurrentView;
+	public RandomAccessibleInterval<FloatType> otherCurrentView;
+	public ArrayList<RefinedPeak<Point>> peaks;
+	public Color inactiveColor = new Color(0.95f, 0.95f, 0.95f);
 	public Rectangle standardRectangle;
 	public EllipseRoi standardEllipse;
-	boolean isComputing = false;
-	boolean findBlobsViaMSER = false;
-	boolean findBlobsViaDOG = false;
-	boolean findBlobsViaSEGMSER = false;
-	boolean findBlobsViaSEGDOG = false;
-	boolean NormalizeImage = false;
-	boolean Mediancurr = false;
-	boolean MedianAll = false;
-	boolean isStarted = false;
-	boolean enableSigma2 = false;
-	boolean sigma2IsAdjustable = true;
-	boolean propagate = true;
-	boolean updateThreshold = false;
-	boolean lookForMinima = false;
-	boolean Auto = false;
-	boolean lookForMaxima = true;
-	boolean showMSER = false;
-	boolean showDOG = false;
-	boolean showSegMSER = false;
-	boolean showSegDOG = false;
-	float delta = 1f;
-	int deltaInit = 10;
-	int maxVarInit = 1;
-	int Maxlabel;
-	int alphaInit = 0;
-	int betaInit = 0;
-	int minSizeInit = 1;
-	int maxSizeInit = 100;
-	boolean showKalman = true;
-	boolean showNN = false;
-	boolean SaveTxt = true;
-	boolean SaveXLS = true;
-	ImagePlus impcopy;
-	double CalibrationX;
-	double CalibrationY;
-	boolean showNew = false;
-	BlobTracker blobtracker;
-	CostFunction<SnakeObject, SnakeObject> UserchosenCostFunction;
-
-	float initialSearchradius = 10;
-	float maxSearchradius = 15;
-	int missedframes = 20;
+	public boolean isComputing = false;
+	public boolean findBlobsViaMSER = false;
+	public boolean findBlobsViaDOG = false;
+	public boolean findBlobsViaSEGMSER = false;
+	public boolean findBlobsViaSEGDOG = false;
+	public boolean NormalizeImage = false;
+	public boolean Mediancurr = false;
+	public boolean MedianAll = false;
+	public boolean isStarted = false;
+	public boolean enableSigma2 = false;
+	public boolean sigma2IsAdjustable = true;
+	public boolean propagate = true;
+	public boolean updateThreshold = false;
+	public boolean lookForMinima = false;
+	public boolean Auto = false;
+	public boolean lookForMaxima = true;
+	public boolean showMSER = false;
+	public boolean showDOG = false;
+	public boolean showSegMSER = false;
+	public boolean showSegDOG = false;
+	public float delta = 1f;
+	public int deltaInit = 10;
+	public int maxVarInit = 1;
+	public int Maxlabel;
+	public int alphaInit = 0;
+	public int betaInit = 0;
+	public int minSizeInit = 1;
+	public int maxSizeInit = 100;
+	public boolean showKalman = true;
+	public boolean showNN = false;
+	public boolean SaveTxt = true;
+	public boolean SaveXLS = true;
+	public ImagePlus impcopy;
+	public double CalibrationX;
+	public double CalibrationY;
+	public boolean showNew = false;
+	public BlobTracker blobtracker;
+	public CostFunction<SnakeObject, SnakeObject> UserchosenCostFunction;
+	public Color colorSelect = Color.red;
+	public Color coloroutSelect = Color.CYAN;
+	public Color colorCreate = Color.red;
+	public Color colorDraw = Color.green;
+	public Color colorKDtree = Color.blue;
+	public Color colorOld = Color.MAGENTA;
+	public Color colorPrevious = Color.gray;
+	public Color colorFinal = Color.YELLOW;
+	public Color colorRadius = Color.yellow;
+	public float initialSearchradius = 10;
+	public float maxSearchradius = 15;
+	public int missedframes = 20;
 	public int initialSearchradiusInit = (int) initialSearchradius;
 	public float initialSearchradiusMin = 0;
 	public float initialSearchradiusMax = 100;
@@ -318,31 +340,31 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public float alphaMax = 1;
 	public float betaMin = 0;
 	public float betaMax = 1;
-	MserTree<UnsignedByteType> newtree;
+	public MserTree<UnsignedByteType> newtree;
 	public int maxSearchradiusInit = (int) maxSearchradius;
 	public float maxSearchradiusMin = 10;
 	public float maxSearchradiusMax = 500;
-	RandomAccessibleInterval<UnsignedByteType> newimg;
+	public RandomAccessibleInterval<UnsignedByteType> newimg;
 	public int missedframesInit = missedframes;
 	public float missedframesMin = 0;
 	public float missedframesMax = 100;
-	RandomAccessibleInterval<IntType> intimg;
-	ArrayList<ArrayList<SnakeObject>> AllSliceSnakes;
-	ArrayList<ArrayList<SnakeObject>> All3DSnakes;
-	ArrayList<ArrayList<SnakeObject>> All3DSnakescopy;
-	private ArrayList<SnakeObject> ProbBlobs;
-	boolean displayBitimg = false;
-	boolean displayWatershedimg = false;
-	boolean showProgress = false;
-	ArrayList<ComSnake> finalRois;
-	ArrayList<Roi> Rois;
-	ArrayList<Roi> NearestNeighbourRois;
-	ArrayList<Roi> BiggerRois;
+	public RandomAccessibleInterval<IntType> intimg;
+	public ArrayList<ArrayList<SnakeObject>> AllSliceSnakes;
+	public ArrayList<ArrayList<SnakeObject>> All3DSnakes;
+	public ArrayList<ArrayList<SnakeObject>> All3DSnakescopy;
+	public ArrayList<SnakeObject> ProbBlobs;
+	ArrayList<Pair<Integer, Roi>> AllSelectedrois;
+	ArrayList<Pair<Integer, double[]>> AllSelectedcenter;
+	public boolean displayBitimg = false;
+	public boolean displayWatershedimg = false;
+	public boolean showProgress = false;
+	public ArrayList<ComSnake> finalRois;
+	public ArrayList<Roi> Rois;
+	public ArrayList<Roi> NearestNeighbourRois;
+	public ArrayList<Roi> BiggerRois;
 
 	public static enum ValueChange {
-		SIGMA, THRESHOLD, ROI, MINMAX, ALL, THIRDDIM, FOURTHDIM, maxSearch, iniSearch, missedframes, 
-		MINDIVERSITY, DELTA, MINSIZE, MAXSIZE, MAXVAR, DARKTOBRIGHT, FindBlobsVia, SHOWMSER, SHOWDOG, NORMALIZE, MEDIAN, THIRDDIMTrack, 
-		FOURTHDIMTrack, SizeX, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, SHOWPROGRESS, RADIUS
+		SIGMA, THRESHOLD, ROI, MINMAX, ALL, THIRDDIM, FOURTHDIM, maxSearch, iniSearch, missedframes, MINDIVERSITY, DELTA, MINSIZE, MAXSIZE, MAXVAR, DARKTOBRIGHT, FindBlobsVia, SHOWMSER, SHOWDOG, NORMALIZE, MEDIAN, THIRDDIMTrack, FOURTHDIMTrack, SizeX, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, SHOWPROGRESS, RADIUS
 	}
 
 	boolean isFinished = false;
@@ -549,6 +571,80 @@ public class InteractiveActiveContour_ implements PlugIn {
 		this.maxIntensityImage = max;
 	}
 
+	public void setInitialminDiversity(final float value) {
+		minDiversity = value;
+		minDiversityInit = computeScrollbarPositionFromValue(minDiversity, minDiversityMin, minDiversityMax,
+				scrollbarSize);
+	}
+
+	public double getInitialminDiversity(final float value) {
+
+		return minDiversity;
+
+	}
+
+	public void setInitialminSize(final int value) {
+		minSize = value;
+		minSizeInit = computeScrollbarPositionFromValue(minSize, minSizemin, minSizemax, scrollbarSize);
+	}
+
+	public double getInitialminSize(final int value) {
+
+		return minSize;
+
+	}
+
+	public void setInitialmaxSize(final int value) {
+		maxSize = value;
+		maxSizeInit = computeScrollbarPositionFromValue(maxSize, maxSizemin, maxSizemax, scrollbarSize);
+	}
+
+	public double getInitialmaxSize(final int value) {
+
+		return maxSize;
+
+	}
+
+	public void setInitialDelta(final float value) {
+		delta = value;
+		deltaInit = computeScrollbarPositionFromValue(delta, deltaMin, deltaMax, scrollbarSize);
+	}
+
+	public double getInitialDelta(final float value) {
+
+		return delta;
+
+	}
+
+	public void setInitialsearchradius(final float value) {
+		initialSearchradius = value;
+		initialSearchradiusInit = computeScrollbarPositionFromValue(initialSearchradius, initialSearchradiusMin,
+				initialSearchradiusMax, scrollbarSize);
+	}
+
+	public void setInitialmaxsearchradius(final float value) {
+		maxSearchradius = value;
+		maxSearchradiusInit = computeScrollbarPositionFromValue(maxSearchradius, maxSearchradiusMin, maxSearchradiusMax,
+				scrollbarSize);
+	}
+
+	public double getInitialsearchradius(final float value) {
+
+		return initialSearchradius;
+
+	}
+
+	public void setInitialUnstability_Score(final float value) {
+		maxVar = value;
+		maxVarInit = computeScrollbarPositionFromValue(maxVar, maxVarMin, maxVarMax, scrollbarSize);
+	}
+
+	public double getInitialUnstability_Score(final float value) {
+
+		return maxVar;
+
+	}
+
 	@Override
 	public void run(String arg) {
 
@@ -557,6 +653,16 @@ public class InteractiveActiveContour_ implements PlugIn {
 		// UIManager.put("ProgressBar.foreground", Color.BLUE);
 		UIManager.put("ProgressBar.font", Font.BOLD);
 		// UIManager.put("ProgressBar.background", Color.BLUE);
+		AllSelectedrois = new ArrayList<Pair<Integer, Roi>>();
+		AllSelectedcenter = new ArrayList<Pair<Integer, double[]>>();
+		setInitialUnstability_Score(maxVarInit);
+		setInitialDelta(deltaInit);
+
+		setInitialminDiversity(minDiversityInit);
+		setInitialmaxSize(maxSizeInit);
+		setInitialminSize(minSizeInit);
+		setInitialsearchradius(initialSearchradiusInit);
+		setInitialmaxsearchradius(maxSearchradius);
 
 		jpb = new JProgressBar();
 		Rois = new ArrayList<Roi>();
@@ -683,7 +789,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	}
 
-	private boolean Dialogue() {
+	public boolean Dialogue() {
 		GenericDialog gd = new GenericDialog("Move in third Dimension");
 
 		if (thirdDimensionSize > 1) {
@@ -700,7 +806,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		return !gd.wasCanceled();
 	}
 
-	private boolean DialogueSlice() {
+	public boolean DialogueSlice() {
 		GenericDialog gd = new GenericDialog("Move in fourth Dimension");
 
 		if (fourthDimensionSize > 1) {
@@ -717,7 +823,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		return !gd.wasCanceled();
 	}
 
-	private boolean Dialoguesec() {
+	public boolean Dialoguesec() {
 		GenericDialog gd = new GenericDialog("Choose last third Dimension co-ordinate and track in Z/T");
 
 		if (thirdDimensionSize > 1) {
@@ -735,7 +841,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		return !gd.wasCanceled();
 	}
 
-	private boolean DialogueRedo() {
+	public boolean DialogueRedo() {
 		GenericDialog gd = new GenericDialog("Redo Snakes in user chosen View");
 
 		if (thirdDimensionSize > 1) {
@@ -766,7 +872,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	 *            - what did change
 	 */
 
-	protected void updatePreview(final ValueChange change) {
+	public void updatePreview(final ValueChange change) {
 
 		RoiManager roimanager = RoiManager.getInstance();
 
@@ -778,10 +884,19 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		if (change == ValueChange.THIRDDIM || change == ValueChange.FOURTHDIM) {
 			System.out.println("Current Time point: " + thirdDimension);
+			if (imp == null)
+				imp = ImageJFunctions.show(CurrentView);
+			else {
+				final float[] pixels = (float[]) imp.getProcessor().getPixels();
+				final Cursor<FloatType> c = Views.iterable(CurrentView).cursor();
 
-			if (imp != null)
-				imp.close();
-			imp = ImageJFunctions.show(CurrentView);
+				for (int i = 0; i < pixels.length; ++i)
+					pixels[i] = c.next().get();
+
+				imp.updateAndDraw();
+
+			}
+
 			imp.setTitle("Current View in third dimension: " + " " + thirdDimension + " " + "fourth dimension: " + " "
 					+ fourthDimension);
 
@@ -840,11 +955,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
 			interval = new FinalInterval(min, max);
 
-			currentimg = extractImage(CurrentView);
-			othercurrentimg = extractotherImage(otherCurrentView);
+			currentimg = util.FindersUtils.extractImage(CurrentView, interval);
+			othercurrentimg = util.FindersUtils.extractImage(otherCurrentView, interval);
 
-			newimg = copytoByteImage(currentimg);
-
+			newimg = util.FindersUtils.copytoByteImage(currentimg);
 
 			if (showMSER) {
 
@@ -852,13 +966,13 @@ public class InteractiveActiveContour_ implements PlugIn {
 				IJ.log(" Computing the Component tree");
 
 				newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
-				Rois = getcurrentRois(newtree);
-				ArrayList<double[]> centerRoi = getRoiMean(newtree);
+				Rois = util.FindersUtils.getcurrentRois(newtree);
+				ArrayList<double[]> centerRoi = util.FindersUtils.getRoiMean(newtree);
 
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
 					double[] center = new double[] { centerRoi.get(index)[0], centerRoi.get(index)[1] };
-				
+
 					Roi or = Rois.get(index);
 
 					or.setStrokeColor(Color.red);
@@ -890,13 +1004,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				peaks = newdog.getSubpixelPeaks();
 
-				Rois = getcurrentRois(peaks);
+				Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
 				for (int index = 0; index < peaks.size(); ++index) {
 
 					double[] center = new double[] { peaks.get(index).getDoublePosition(0),
 							peaks.get(index).getDoublePosition(1) };
 
-					
 					Roi or = Rois.get(index);
 
 					or.setStrokeColor(Color.red);
@@ -937,19 +1050,18 @@ public class InteractiveActiveContour_ implements PlugIn {
 				for (int label = 1; label < Maxlabel - 1; label++) {
 
 					RandomAccessibleInterval<FloatType> currentsegimg = getCurrentSegment(label);
-					RandomAccessibleInterval<UnsignedByteType> currentnewimg = copytoByteImage(currentsegimg);
+					RandomAccessibleInterval<UnsignedByteType> currentnewimg = util.FindersUtils.copytoByteImage(currentsegimg);
 					MserTree<UnsignedByteType> localtree = MserTree.buildMserTree(currentnewimg, delta, minSize,
 							maxSize, maxVar, minDiversity, darktobright);
-					ArrayList<Roi> currentroi = getcurrentRois(localtree);
+					ArrayList<Roi> currentroi = util.FindersUtils.getcurrentRois(localtree);
 					Rois.addAll(currentroi);
 
 				}
 
-				ArrayList<double[]> centerRoi = getRoiMean(newtree);
+				ArrayList<double[]> centerRoi = util.FindersUtils.getRoiMean(newtree);
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
 					double[] center = new double[] { centerRoi.get(index)[0], centerRoi.get(index)[1] };
-					
 
 					Roi or = Rois.get(index);
 
@@ -1002,7 +1114,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 							threshold, true);
 
 					ArrayList<RefinedPeak<Point>> localpeaks = newdog.getSubpixelPeaks();
-					ArrayList<Roi> currentroi = getcurrentRois(localpeaks);
+					ArrayList<Roi> currentroi = util.FindersUtils.getcurrentRois(localpeaks, sigma, sigma2);
 					Rois.addAll(currentroi);
 					peaks.addAll(localpeaks);
 
@@ -1012,7 +1124,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 					double[] center = new double[] { peaks.get(index).getDoublePosition(0),
 							peaks.get(index).getDoublePosition(1) };
 
-					
 					Roi or = Rois.get(index);
 
 					or.setStrokeColor(Color.red);
@@ -1039,10 +1150,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
 			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
 			interval = new FinalInterval(min, max);
-			currentimg = extractImage(CurrentView);
-			othercurrentimg = extractotherImage(otherCurrentView);
+			currentimg = util.FindersUtils.extractImage(CurrentView, interval);
+			othercurrentimg = util.FindersUtils.extractImage(otherCurrentView, interval);
 
-			newimg = copytoByteImage(currentimg);
+			newimg = util.FindersUtils.copytoByteImage(currentimg);
 			final Float houghval = AutomaticThresholding(currentimg);
 
 			// Get local Minima in scale space to get Max rho-theta points
@@ -1089,10 +1200,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 			for (int label = 1; label < Maxlabel - 1; label++) {
 
 				RandomAccessibleInterval<FloatType> currentsegimg = getCurrentSegment(label);
-				RandomAccessibleInterval<UnsignedByteType> currentnewimg = copytoByteImage(currentsegimg);
+				RandomAccessibleInterval<UnsignedByteType> currentnewimg = util.FindersUtils.copytoByteImage(currentsegimg);
 				MserTree<UnsignedByteType> localtree = MserTree.buildMserTree(currentnewimg, delta, minSize, maxSize,
 						maxVar, minDiversity, darktobright);
-				ArrayList<Roi> currentroi = getcurrentRois(localtree);
+				ArrayList<Roi> currentroi = util.FindersUtils.getcurrentRois(localtree);
 				Rois.addAll(currentroi);
 
 			}
@@ -1154,7 +1265,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 						interval, new double[] { 1, 1 }, sigma, sigma2, type, threshold, true);
 
 				ArrayList<RefinedPeak<Point>> localpeaks = newdog.getSubpixelPeaks();
-				ArrayList<Roi> currentroi = getcurrentRois(localpeaks);
+				ArrayList<Roi> currentroi = util.FindersUtils.getcurrentRois(localpeaks, sigma, sigma2);
 				Rois.addAll(currentroi);
 
 			}
@@ -1190,7 +1301,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			IJ.log(" Computing the Component tree");
 
 			newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
-			Rois = getcurrentRois(newtree);
+			Rois = util.FindersUtils.getcurrentRois(newtree);
 
 			IJ.log("MSER parameters:" + " " + " thirdDimension: " + " " + thirdDimension + " " + "fourthDimension: "
 					+ " " + fourthDimension);
@@ -1257,7 +1368,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			IJ.log("Sigma " + " " + sigma + " " + "Sigma2 " + " " + sigma2 + " " + "Threshold " + " " + threshold);
 			peaks = newdog.getSubpixelPeaks();
 
-			Rois = getcurrentRois(peaks);
+			Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
 
 			for (int index = 0; index < Rois.size(); ++index) {
 
@@ -1279,753 +1390,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 		isComputing = false;
 	}
 
-	protected class MserListener implements ItemListener {
-		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = findBlobsViaMSER;
-
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				findBlobsViaMSER = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
-
-				findBlobsViaMSER = true;
-				findBlobsViaDOG = false;
-				updatePreview(ValueChange.ROI);
-
-				panelSecond.removeAll();
-
-				final GridBagLayout layout = new GridBagLayout();
-				final GridBagConstraints c = new GridBagConstraints();
-
-				panelSecond.setLayout(layout);
-				final Label Name = new Label("Step 2", Label.CENTER);
-				panelSecond.add(Name, c);
-
-				final Scrollbar deltaS = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar maxVarS = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar minDiversityS = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0,
-						10 + scrollbarSize);
-				final Scrollbar minSizeS = new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar maxSizeS = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
-				final Button ComputeTree = new Button("Compute Tree and display");
-				maxVar = computeValueFromScrollbarPosition(maxVarInit, maxVarMin, maxVarMax, scrollbarSize);
-				delta = computeValueFromScrollbarPosition(deltaInit, deltaMin, deltaMax, scrollbarSize);
-				minDiversity = computeValueFromScrollbarPosition(minDiversityInit, minDiversityMin, minDiversityMax,
-						scrollbarSize);
-				minSize = (int) computeValueFromScrollbarPosition(minSizeInit, minSizemin, minSizemax, scrollbarSize);
-				maxSize = (int) computeValueFromScrollbarPosition(maxSizeInit, maxSizemin, maxSizemax, scrollbarSize);
-
-				final Checkbox min = new Checkbox("Look for Minima ", darktobright);
-
-				final Label deltaText = new Label("delta = ", Label.CENTER);
-				final Label maxVarText = new Label("maxVar = ", Label.CENTER);
-				final Label minDiversityText = new Label("minDiversity = ", Label.CENTER);
-				final Label minSizeText = new Label("MinSize = ", Label.CENTER);
-				final Label maxSizeText = new Label("MaxSize = ", Label.CENTER);
-				final Label MSparam = new Label("Determine MSER parameters");
-				MSparam.setBackground(new Color(1, 0, 1));
-				MSparam.setForeground(new Color(255, 255, 255));
-				/* Location */
-				panelSecond.setLayout(layout);
-
-				c.fill = GridBagConstraints.HORIZONTAL;
-				c.gridx = 0;
-				c.gridy = 0;
-				c.weightx = 4;
-				c.weighty = 1.5;
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(MSparam, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(deltaText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(deltaS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(maxVarText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(maxVarS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(minDiversityText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(minDiversityS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(minSizeText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(minSizeS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(maxSizeText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(maxSizeS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(min, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(ComputeTree, c);
-
-				deltaS.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, deltaS));
-
-				maxVarS.addAdjustmentListener(
-						new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVarS));
-
-				minDiversityS.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin,
-						minDiversityMax, scrollbarSize, minDiversityS));
-
-				minSizeS.addAdjustmentListener(
-						new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSizeS));
-
-				maxSizeS.addAdjustmentListener(
-						new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSizeS));
-
-				min.addItemListener(new DarktobrightListener());
-				ComputeTree.addActionListener(new ComputeTreeListener());
-				panelSecond.repaint();
-				panelSecond.validate();
-				Cardframe.pack();
-			}
-
-			if (findBlobsViaMSER != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.FindBlobsVia);
-			}
-		}
-	}
-
-	protected class SegMserListener implements ItemListener {
-		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = findBlobsViaSEGMSER;
-
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				findBlobsViaSEGMSER = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
-
-				findBlobsViaSEGMSER = true;
-				findBlobsViaSEGDOG = true;
-				findBlobsViaMSER = false;
-				findBlobsViaDOG = false;
-				updatePreview(ValueChange.ROI);
-
-				panelSecond.removeAll();
-
-				final GridBagLayout layout = new GridBagLayout();
-				final GridBagConstraints c = new GridBagConstraints();
-
-				panelSecond.setLayout(layout);
-				final Label Name = new Label("Step 2", Label.CENTER);
-				panelSecond.add(Name, c);
-
-				// IJ.log("Determining the initial threshold for the image");
-				// thresholdHoughInit =
-				// GlobalThresholding.AutomaticThresholding(currentPreprocessedimg);
-				final Scrollbar thresholdSHough = new Scrollbar(Scrollbar.HORIZONTAL, thresholdHoughInit, 10, 0,
-						10 + scrollbarSize);
-				thresholdHough = computeValueFromScrollbarPosition(thresholdHoughInit, thresholdHoughMin,
-						thresholdHoughMax, scrollbarSize);
-
-				final Checkbox displayBit = new Checkbox("Display Bitimage ", displayBitimg);
-				final Checkbox displayWatershed = new Checkbox("Display Watershedimage ", displayWatershedimg);
-				final Label thresholdText = new Label("thresholdValue = ", Label.CENTER);
-
-				final Button Dowatershed = new Button("Do watershedding");
-				final Label Segparam = new Label("Determine Threshold level for Segmentation");
-				Segparam.setBackground(new Color(1, 0, 1));
-				Segparam.setForeground(new Color(255, 255, 255));
-
-				/* Location */
-				c.fill = GridBagConstraints.HORIZONTAL;
-				c.gridx = 0;
-				c.gridy = 0;
-				c.weightx = 1;
-				c.weighty = 1.5;
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(Segparam, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(thresholdText, c);
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(thresholdSHough, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(displayBit, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(displayWatershed, c);
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(Dowatershed, c);
-
-				thresholdSHough.addAdjustmentListener(
-						new ThresholdHoughListener(thresholdText, thresholdHoughMin, thresholdHoughMax));
-
-				displayBit.addItemListener(new ShowBitimgListener());
-				displayWatershed.addItemListener(new ShowwatershedimgListener());
-				Dowatershed.addActionListener(new DowatershedListener());
-
-				final Scrollbar deltaS = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar maxVarS = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar minDiversityS = new Scrollbar(Scrollbar.HORIZONTAL, minDiversityInit, 10, 0,
-						10 + scrollbarSize);
-				final Scrollbar minSizeS = new Scrollbar(Scrollbar.HORIZONTAL, minSizeInit, 10, 0, 10 + scrollbarSize);
-				final Scrollbar maxSizeS = new Scrollbar(Scrollbar.HORIZONTAL, maxSizeInit, 10, 0, 10 + scrollbarSize);
-				final Button ComputeTree = new Button("Compute Tree and display");
-				maxVar = computeValueFromScrollbarPosition(maxVarInit, maxVarMin, maxVarMax, scrollbarSize);
-				delta = computeValueFromScrollbarPosition(deltaInit, deltaMin, deltaMax, scrollbarSize);
-				minDiversity = computeValueFromScrollbarPosition(minDiversityInit, minDiversityMin, minDiversityMax,
-						scrollbarSize);
-				minSize = (int) computeValueFromScrollbarPosition(minSizeInit, minSizemin, minSizemax, scrollbarSize);
-				maxSize = (int) computeValueFromScrollbarPosition(maxSizeInit, maxSizemin, maxSizemax, scrollbarSize);
-
-				final Checkbox min = new Checkbox("Look for Minima ", darktobright);
-
-				final Label deltaText = new Label("delta = ", Label.CENTER);
-				final Label maxVarText = new Label("maxVar = ", Label.CENTER);
-				final Label minDiversityText = new Label("minDiversity = ", Label.CENTER);
-				final Label minSizeText = new Label("MinSize = ", Label.CENTER);
-				final Label maxSizeText = new Label("MaxSize = ", Label.CENTER);
-				final Label MSparam = new Label("Determine MSER parameters");
-				MSparam.setBackground(new Color(1, 0, 1));
-				MSparam.setForeground(new Color(255, 255, 255));
-				/* Location */
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(MSparam, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(deltaText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(deltaS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(maxVarText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(maxVarS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(minDiversityText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(minDiversityS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(minSizeText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(minSizeS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(maxSizeText, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(maxSizeS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(min, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(ComputeTree, c);
-
-				deltaS.addAdjustmentListener(new DeltaListener(deltaText, deltaMin, deltaMax, scrollbarSize, deltaS));
-
-				maxVarS.addAdjustmentListener(
-						new maxVarListener(maxVarText, maxVarMin, maxVarMax, scrollbarSize, maxVarS));
-
-				minDiversityS.addAdjustmentListener(new minDiversityListener(minDiversityText, minDiversityMin,
-						minDiversityMax, scrollbarSize, minDiversityS));
-
-				minSizeS.addAdjustmentListener(
-						new minSizeListener(minSizeText, minSizemin, minSizemax, scrollbarSize, minSizeS));
-
-				maxSizeS.addAdjustmentListener(
-						new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSizeS));
-
-				min.addItemListener(new DarktobrightListener());
-				ComputeTree.addActionListener(new ComputesegTreeListener());
-				panelSecond.repaint();
-				panelSecond.validate();
-				Cardframe.pack();
-			}
-
-			if (findBlobsViaSEGMSER != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.FindBlobsVia);
-			}
-		}
-	}
-
-	protected class ShowBitimgListener implements ItemListener {
-		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = displayBitimg;
-
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				displayBitimg = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED)
-				displayBitimg = true;
-
-			if (displayBitimg != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.DISPLAYBITIMG);
-			}
-		}
-	}
-
-	protected class DowatershedListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent arg0) {
-			updatePreview(ValueChange.Segmentation);
-
-		}
-	}
-
-	protected class ShowwatershedimgListener implements ItemListener {
-		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = displayWatershedimg;
-
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				displayWatershedimg = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED)
-				displayWatershedimg = true;
-
-			if (displayWatershedimg != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.DISPLAYWATERSHEDIMG);
-			}
-		}
-	}
-
-	protected class FindBlobsListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-
-			RandomAccessibleInterval<FloatType> groundframe = currentimg;
-
-			if (findBlobsViaMSER) {
-
-				updatePreview(ValueChange.SHOWMSER);
-
-				BlobfinderInteractiveMSER newblobMser = new BlobfinderInteractiveMSER(currentimg, othercurrentimg,
-						newtree, sizeX, sizeY, thirdDimension, fourthDimension);
-
-				ProbBlobs = FindblobsVia.BlobfindingMethod(newblobMser);
-
-			}
-
-			if (findBlobsViaDOG) {
-
-				updatePreview(ValueChange.SHOWDOG);
-
-				BlobfinderInteractiveDoG newblobDog = new BlobfinderInteractiveDoG(currentimg, othercurrentimg,
-						lookForMaxima, lookForMinima, sigma, sigma2, peaks, thirdDimension, fourthDimension);
-
-				ProbBlobs = FindblobsVia.BlobfindingMethod(newblobDog);
-
-			}
-
-		}
-
-	}
-
-	protected class ComputeTreeListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent arg0) {
-			showMSER = true;
-			updatePreview(ValueChange.SHOWMSER);
-
-		}
-	}
-
-	protected class ComputesegTreeListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent arg0) {
-			showSegMSER = true;
-			updatePreview(ValueChange.SHOWSEGMSER);
-
-		}
-	}
-
-	protected class DisplayBlobsListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent arg0) {
-			showDOG = true;
-			updatePreview(ValueChange.SHOWDOG);
-
-		}
-	}
-
-	protected class DisplaysegBlobsListener implements ActionListener {
-
-		@Override
-		public void actionPerformed(ActionEvent arg0) {
-			showSegDOG = true;
-			updatePreview(ValueChange.SHOWSEGDOG);
-
-		}
-	}
-
-	protected class DarktobrightListener implements ItemListener {
-		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = darktobright;
-
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				darktobright = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED)
-				darktobright = true;
-
-			if (darktobright != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.DARKTOBRIGHT);
-			}
-		}
-	}
-
-	protected class moveInThirdDimListener implements ActionListener {
-		final float min, max;
-		Label timeText;
-		final Scrollbar thirdDimensionScroll;
-
-		public moveInThirdDimListener(Scrollbar thirdDimensionScroll, Label timeText, float min, float max) {
-			this.thirdDimensionScroll = thirdDimensionScroll;
-			this.min = min;
-			this.max = max;
-			this.timeText = timeText;
-		}
-
-		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-
-			boolean dialog = Dialogue();
-			if (dialog) {
-
-				thirdDimensionScroll
-						.setValue(computeIntScrollbarPositionFromValue(thirdDimension, min, max, scrollbarSize));
-				timeText.setText("Third Dimension = " + thirdDimensionslider);
-
-				if (thirdDimension > thirdDimensionSize) {
-					IJ.log("Max frame number exceeded, moving to last frame instead");
-					thirdDimension = thirdDimensionSize;
-					CurrentView = getCurrentView();
-					otherCurrentView = getotherCurrentView();
-				} else {
-
-					CurrentView = getCurrentView();
-					otherCurrentView = getotherCurrentView();
-				}
-
-				imp = WindowManager.getCurrentImage();
-				Roi roi = imp.getRoi();
-				if (roi == null) {
-					// IJ.log( "A rectangular ROI is required to define the
-					// area..."
-					// );
-					imp.setRoi(standardRectangle);
-					roi = imp.getRoi();
-				}
-
-				// compute first version
-				updatePreview(ValueChange.THIRDDIM);
-				isStarted = true;
-
-				// check whenever roi is modified to update accordingly
-				roiListener = new RoiListener();
-				imp.getCanvas().addMouseListener(roiListener);
-
-			}
-		}
-	}
-
-	protected class moveInFourthDimListener implements ActionListener {
-		final float min, max;
-		Label sliceText;
-		final Scrollbar fourthDimensionScroll;
-
-		public moveInFourthDimListener(Scrollbar fourthDimensionScroll, Label sliceText, float min, float max) {
-			this.fourthDimensionScroll = fourthDimensionScroll;
-			this.min = min;
-			this.max = max;
-			this.sliceText = sliceText;
-		}
-
-		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-
-			boolean dialog = DialogueSlice();
-			if (dialog) {
-
-				fourthDimensionScroll
-						.setValue(computeIntScrollbarPositionFromValue(fourthDimension, min, max, scrollbarSize));
-				sliceText.setText("Fourth Dimension = " + fourthDimensionslider);
-
-				if (fourthDimension > fourthDimensionSize) {
-					IJ.log("Fourth dimension size exceeded, moving to co-ordinate in 4th dimension instead");
-					fourthDimension = fourthDimensionSize;
-					CurrentView = getCurrentView();
-					otherCurrentView = getotherCurrentView();
-				}
-
-				else {
-
-					CurrentView = getCurrentView();
-					otherCurrentView = getotherCurrentView();
-
-				}
-
-				imp = WindowManager.getCurrentImage();
-				sliceObserver = new SliceObserver(imp, new ImagePlusListener());
-				Roi roi = imp.getRoi();
-				if (roi == null) {
-					// IJ.log( "A rectangular ROI is required to define the
-					// area..."
-					// );
-					imp.setRoi(standardRectangle);
-					roi = imp.getRoi();
-				}
-
-				// compute first version
-				updatePreview(ValueChange.FOURTHDIM);
-				isStarted = true;
-
-				// check whenever roi is modified to update accordingly
-				roiListener = new RoiListener();
-				imp.getCanvas().addMouseListener(roiListener);
-
-			}
-		}
-	}
-
-	class ProgressAll extends SwingWorker<Void, Void> {
-
-		@Override
-		protected Void doInBackground() throws Exception {
-
-			// add listener to the imageplus slice slider
-			sliceObserver = new SliceObserver(imp, new ImagePlusListener());
-
-			All3DSnakes.clear();
-			All3DSnakescopy.clear();
-			Dialoguesec();
-			int next = thirdDimension;
-			int nextZ = fourthDimension;
-			if (snakestack != null) {
-				for (int index = 1; index < snakestack.size(); ++index) {
-
-					snakestack.deleteSlice(index);
-				}
-			}
-
-			if (measuresnakestack != null) {
-				for (int index = 1; index < measuresnakestack.size(); ++index) {
-
-					measuresnakestack.deleteSlice(index);
-				}
-			}
-			putFeature(SNAKEPROGRESS, Double.valueOf(AllSliceSnakes.size()));
-			// Run snakes over a frame for each slice in that frame
-			for (int indexx = next; indexx <= fourthDimensionSize; ++indexx) {
-				snakestack = new ImageStack((int) originalimgA.dimension(0), (int) originalimgA.dimension(1),
-						java.awt.image.ColorModel.getRGBdefault());
-				measuresnakestack = new ImageStack((int) originalimgB.dimension(0), (int) originalimgB.dimension(1),
-						java.awt.image.ColorModel.getRGBdefault());
-
-				thirdDimension = indexx;
-				thirdDimensionslider = thirdDimension;
-
-				AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
-
-				CurrentView = getCurrentView();
-				otherCurrentView = getotherCurrentView();
-
-				updatePreview(ValueChange.THIRDDIMTrack);
-
-				for (int z = nextZ; z <= thirdDimensionSize; ++z) {
-
-					fourthDimension = z;
-					fourthDimensionslider = fourthDimension;
-
-					CurrentView = getCurrentView();
-					otherCurrentView = getotherCurrentView();
-
-					updatePreview(ValueChange.FOURTHDIMTrack);
-					roiListener = new RoiListener();
-					imp.getCanvas().addMouseListener(roiListener);
-
-					BlobfinderInteractiveSnake snake;
-					if (NearestNeighbourRois.size() > 0)
-						snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois,
-								sizeX, sizeY, usefolder, addTrackToName, z, indexx, TrackinT, jpb, thirdDimensionSize);
-					else
-
-						snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY,
-								usefolder, addTrackToName, z, indexx, TrackinT, jpb, thirdDimensionSize);
-
-					RoiManager manager = RoiManager.getInstance();
-					if (manager != null) {
-						manager.getRoisAsArray();
-					}
-
-					isStarted = true;
-
-					if (Auto) {
-						if (indexx > next || z > nextZ)
-							snake.Auto = true;
-					}
-					snake.checkInput();
-
-					snake.process();
-
-					usefolder = snake.getFolder();
-					addTrackToName = snake.getFile();
-
-					finalRois = snake.getfinalRois();
-					currentsnakes = snake.getResult();
-
-					snakeoverlay = snake.getABsnake();
-
-					if (snake.displaysnake) {
-
-						if (imp != null)
-							imp.close();
-						imp = ImageJFunctions.show(CurrentView);
-						imp.hide();
-						if (measureimp != null)
-							measureimp.close();
-						measureimp = ImageJFunctions.show(otherCurrentView);
-						measureimp.hide();
-						snakestack.addSlice(imp.getImageStack().getProcessor(z).convertToRGB());
-						measuresnakestack.addSlice(measureimp.getImageStack().getProcessor(z).convertToRGB());
-
-						ColorProcessor cp = (ColorProcessor) (snakestack.getProcessor(z).duplicate());
-						ColorProcessor measurecp = (ColorProcessor) (measuresnakestack.getProcessor(z).duplicate());
-
-						for (int i = 0; i < snakeoverlay.size(); ++i) {
-
-							snakeoverlay.get(i).DrawSnake(cp, snake.colorDraw, 1);
-
-							Roi normalroi = snakeoverlay.get(i).createRoi();
-
-							final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, currentimg, sizeX, sizeY);
-							measurecp.setColor(colorDraw);
-							measurecp.setLineWidth(1);
-							measurecp.draw(Bigroi);
-
-						}
-
-						snakestack.setPixels(cp.getPixels(), z);
-						measuresnakestack.setPixels(measurecp.getPixels(), z);
-
-					}
-
-					if (All3DSnakes != null) {
-
-						for (int Listindex = 0; Listindex < All3DSnakes.size(); ++Listindex) {
-
-							SnakeObject SnakeFrame = All3DSnakes.get(Listindex).get(0);
-							int SnakeThirdDim = SnakeFrame.thirdDimension;
-							int SnakeFourthDim = SnakeFrame.fourthDimension;
-
-							if (SnakeThirdDim == thirdDimension && SnakeFourthDim == fourthDimension) {
-								All3DSnakes.remove(Listindex);
-								All3DSnakescopy.remove(Listindex);
-								IJ.log(" Recomputing snakes for currentView");
-
-							}
-						}
-
-					}
-
-					AllSliceSnakes.add(currentsnakes);
-					IJ.log(" " + AllSliceSnakes.size());
-
-				} // Z loop closing
-					// Make KD tree to link objects along Z axis
-
-				ArrayList<SnakeObject> ThreedimensionalSnake = getCentreofMass3D();
-
-				All3DSnakes.add(ThreedimensionalSnake);
-				All3DSnakescopy.add(ThreedimensionalSnake);
-				new ImagePlus("Snakes", snakestack).draw();
-				new ImagePlus("Measure", measuresnakestack).draw();
-			} // t loop closing
-			IJ.log("SnakeList Size" + All3DSnakes.size());
-
-			return null;
-		}
-
-		@Override
-		protected void done() {
-			try {
-				jpb.setIndeterminate(false);
-				get();
-				frame.dispose();
-				JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
-			} catch (ExecutionException | InterruptedException e) {
-				e.printStackTrace();
-			}
-
-		}
-
-	}
-
 	public void goAll() {
 
 		jpb.setIndeterminate(false);
@@ -2039,7 +1403,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		frame.setLocationRelativeTo(panelCont);
 		frame.setVisible(true);
 
-		ProgressAll dosnake = new ProgressAll();
+		ProgressAll dosnake = new ProgressAll(this);
 		dosnake.execute();
 
 	}
@@ -2062,144 +1426,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	}
 
-	class ProgressSnake extends SwingWorker<Void, Void> {
-
-		@Override
-		protected Void doInBackground() throws Exception {
-
-			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
-
-			All3DSnakes.clear();
-			All3DSnakescopy.clear();
-			int next = thirdDimension;
-
-			if (snakestack != null) {
-				for (int index = 1; index < snakestack.size(); ++index) {
-
-					snakestack.deleteSlice(index);
-
-				}
-			}
-			if (measuresnakestack != null) {
-				for (int index = 1; index < measuresnakestack.size(); ++index) {
-
-					measuresnakestack.deleteSlice(index);
-
-				}
-			}
-			Dialoguesec();
-			putFeature(SNAKEPROGRESS, Double.valueOf(AllSliceSnakes.size()));
-
-			for (int z = next; z <= thirdDimensionSize; ++z) {
-
-				thirdDimension = z;
-				thirdDimensionslider = thirdDimension;
-				CurrentView = getCurrentView();
-				otherCurrentView = getotherCurrentView();
-
-				updatePreview(ValueChange.THIRDDIMTrack);
-
-				BlobfinderInteractiveSnake snake;
-				if (NearestNeighbourRois.size() > 0)
-					snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
-							sizeY, usefolder, addTrackToName, z, 0, TrackinT, jpb, thirdDimensionSize);
-				else
-
-					snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
-							addTrackToName, z, 0, TrackinT, jpb, thirdDimensionSize);
-
-				if (Auto && z > next)
-					snake.Auto = true;
-
-				snake.process();
-
-				usefolder = snake.getFolder();
-				addTrackToName = snake.getFile();
-				finalRois = snake.getfinalRois();
-				currentsnakes = snake.getResult();
-
-				snakeoverlay = snake.getABsnake();
-				if (snake.displaysnake) {
-
-					if (imp != null)
-						imp.close();
-					imp = ImageJFunctions.show(CurrentView);
-					imp.hide();
-
-					if (measureimp != null)
-						measureimp.close();
-					measureimp = ImageJFunctions.show(otherCurrentView);
-					measureimp.hide();
-
-					snakestack.addSlice(imp.getImageStack().getProcessor(z).convertToRGB());
-					measuresnakestack.addSlice(measureimp.getImageStack().getProcessor(z).convertToRGB());
-
-					ColorProcessor cp = (ColorProcessor) (snakestack.getProcessor(z).duplicate());
-					ColorProcessor measurecp = (ColorProcessor) (measuresnakestack.getProcessor(z).duplicate());
-
-					for (int i = 0; i < snakeoverlay.size(); ++i) {
-
-						snakeoverlay.get(i).DrawSnake(cp, snake.colorDraw, 1);
-
-						Roi normalroi = snakeoverlay.get(i).createRoi();
-
-						final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, currentimg, sizeX, sizeY);
-						measurecp.setColor(colorDraw);
-						measurecp.setLineWidth(1);
-						measurecp.draw(Bigroi);
-					}
-
-					snakestack.setPixels(cp.getPixels(), z);
-					measuresnakestack.setPixels(measurecp.getPixels(), z);
-
-				}
-
-				if (All3DSnakes != null) {
-
-					for (int Listindex = 0; Listindex < All3DSnakes.size(); ++Listindex) {
-
-						SnakeObject SnakeFrame = All3DSnakes.get(Listindex).get(0);
-						int SnakeThirdDim = SnakeFrame.thirdDimension;
-						int SnakeFourthDim = SnakeFrame.fourthDimension;
-
-						if (SnakeThirdDim == thirdDimension && SnakeFourthDim == fourthDimension) {
-							All3DSnakes.remove(Listindex);
-							All3DSnakescopy.remove(Listindex);
-							IJ.log(" Recomputing snakes for currentView");
-
-						}
-					}
-
-				}
-
-				AllSliceSnakes.add(currentsnakes);
-
-			}
-
-			All3DSnakes.addAll(AllSliceSnakes);
-			All3DSnakescopy.addAll(AllSliceSnakes);
-			new ImagePlus("Snakes", snakestack).show();
-			new ImagePlus("Measure", measuresnakestack).show();
-			IJ.log("SnakeList Size" + All3DSnakes.size());
-
-			return null;
-		}
-
-		@Override
-		protected void done() {
-			try {
-				jpb.setIndeterminate(false);
-				get();
-				frame.dispose();
-				JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
-			} catch (ExecutionException | InterruptedException e) {
-				e.printStackTrace();
-			}
-
-		}
-
-	}
-
 	public void goSnake() {
 
 		panel.removeAll();
@@ -2214,7 +1440,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		frame.setLocationRelativeTo(panelCont);
 		frame.setVisible(true);
 
-		ProgressSnake dosnake = new ProgressSnake();
+		ProgressSnake dosnake = new ProgressSnake(this);
 		dosnake.execute();
 
 	}
@@ -2237,120 +1463,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	}
 
-	class ProgressRedo extends SwingWorker<Void, Void> {
-
-		@Override
-		protected Void doInBackground() throws Exception {
-
-			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
-
-			All3DSnakes.clear();
-			All3DSnakescopy.clear();
-			DialogueRedo();
-
-			thirdDimensionslider = thirdDimension;
-			fourthDimensionslider = fourthDimension;
-			CurrentView = getCurrentView();
-			otherCurrentView = getotherCurrentView();
-			updatePreview(ValueChange.THIRDDIMTrack);
-			BlobfinderInteractiveSnake snake;
-			putFeature(SNAKEPROGRESS, Double.valueOf(AllSliceSnakes.size()));
-			if (NearestNeighbourRois.size() > 0)
-				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
-						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb,
-						thirdDimensionSize);
-			else
-
-				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
-						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb, thirdDimensionSize);
-
-			snake.process();
-
-			usefolder = snake.getFolder();
-			addTrackToName = snake.getFile();
-			currentsnakes = snake.getResult();
-			finalRois = snake.getfinalRois();
-			snakeoverlay = snake.getABsnake();
-
-			if (snake.displaysnake) {
-				int z = 1;
-				if (imp != null)
-					imp.close();
-				imp = ImageJFunctions.show(CurrentView);
-				imp.hide();
-				if (measureimp != null)
-					measureimp.close();
-				measureimp = ImageJFunctions.show(otherCurrentView);
-				measureimp.hide();
-				snakestack.addSlice(imp.getImageStack().getProcessor(z).convertToRGB());
-				measuresnakestack.addSlice(measureimp.getImageStack().getProcessor(z).convertToRGB());
-
-				ColorProcessor cp = (ColorProcessor) (snakestack.getProcessor(z).duplicate());
-				ColorProcessor measurecp = (ColorProcessor) (measuresnakestack.getProcessor(z).duplicate());
-
-				for (int i = 0; i < snakeoverlay.size(); ++i) {
-
-					snakeoverlay.get(i).DrawSnake(cp, snake.colorDraw, 1);
-
-					Roi normalroi = snakeoverlay.get(i).createRoi();
-
-					final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, currentimg, sizeX, sizeY);
-					measurecp.setColor(colorDraw);
-					measurecp.setLineWidth(1);
-					measurecp.draw(Bigroi);
-				}
-
-				snakestack.setPixels(cp.getPixels(), z);
-				measuresnakestack.setPixels(measurecp.getPixels(), z);
-
-			}
-
-			if (All3DSnakes != null) {
-
-				for (int Listindex = 0; Listindex < All3DSnakes.size(); ++Listindex) {
-
-					SnakeObject SnakeFrame = All3DSnakes.get(Listindex).get(0);
-					int SnakeThirdDim = SnakeFrame.thirdDimension;
-					int SnakeFourthDim = SnakeFrame.fourthDimension;
-
-					if (SnakeThirdDim == thirdDimension && SnakeFourthDim == fourthDimension) {
-						All3DSnakes.remove(Listindex);
-						All3DSnakescopy.remove(Listindex);
-						IJ.log(" Recomputing snakes for currentView");
-
-					}
-				}
-
-			}
-
-			AllSliceSnakes.add(currentsnakes);
-
-			All3DSnakes.addAll(AllSliceSnakes);
-			All3DSnakescopy.addAll(AllSliceSnakes);
-			new ImagePlus("Snakes", snakestack).show();
-			new ImagePlus("Measure", measuresnakestack).show();
-			snakestack.deleteLastSlice();
-			measuresnakestack.deleteLastSlice();
-			IJ.log("SnakeList Size" + All3DSnakes.size());
-
-			return null;
-		}
-
-		@Override
-		protected void done() {
-			try {
-				jpb.setIndeterminate(false);
-				get();
-				frame.dispose();
-				JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
-			} catch (ExecutionException | InterruptedException e) {
-				e.printStackTrace();
-			}
-
-		}
-
-	}
-
 	public void goRedo() {
 
 		jpb.setIndeterminate(false);
@@ -2364,7 +1476,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		frame.setLocationRelativeTo(panelCont);
 		frame.setVisible(true);
 
-		ProgressRedo dosnake = new ProgressRedo();
+		ProgressRedo dosnake = new ProgressRedo(this);
 		dosnake.execute();
 
 	}
@@ -2385,116 +1497,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 		}
 	}
 
-	class Progress extends SwingWorker<Void, Void> {
-
-		@Override
-		protected Void doInBackground() throws Exception {
-
-			AllSliceSnakes = new ArrayList<ArrayList<SnakeObject>>();
-
-			thirdDimensionslider = thirdDimension;
-			fourthDimensionslider = fourthDimension;
-			CurrentView = getCurrentView();
-			otherCurrentView = getotherCurrentView();
-			updatePreview(ValueChange.THIRDDIM);
-			putFeature(SNAKEPROGRESS, Double.valueOf(AllSliceSnakes.size()));
-
-			BlobfinderInteractiveSnake snake;
-			if (NearestNeighbourRois.size() > 0)
-				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, NearestNeighbourRois, sizeX,
-						sizeY, usefolder, addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb,
-						thirdDimensionSize);
-			else
-
-				snake = new BlobfinderInteractiveSnake(CurrentView, otherCurrentView, Rois, sizeX, sizeY, usefolder,
-						addTrackToName, thirdDimensionslider, fourthDimensionslider, TrackinT, jpb, thirdDimensionSize);
-			jpb.setIndeterminate(false);
-			snake.process();
-			usefolder = snake.getFolder();
-			addTrackToName = snake.getFile();
-			jpb.getValue();
-
-			currentsnakes = snake.getResult();
-			finalRois = snake.getfinalRois();
-			snakeoverlay = snake.getABsnake();
-
-			snakestack.addSlice(imp.getImageStack().getProcessor(1).convertToRGB());
-			measuresnakestack.addSlice(measureimp.getImageStack().getProcessor(1).convertToRGB());
-
-			if (snake.displaysnake) {
-
-				ColorProcessor cp = (ColorProcessor) (snakestack.getProcessor(1).duplicate());
-
-				ColorProcessor measurecp = (ColorProcessor) (measuresnakestack.getProcessor(1).duplicate());
-
-				for (int i = 0; i < snakeoverlay.size(); ++i) {
-
-					snakeoverlay.get(i).DrawSnake(cp, snake.colorDraw, 1);
-
-					Roi normalroi = snakeoverlay.get(i).createRoi();
-
-					final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, currentimg, sizeX, sizeY);
-					measurecp.setColor(colorDraw);
-					measurecp.setLineWidth(1);
-					measurecp.draw(Bigroi);
-
-				}
-
-				snakestack.setPixels(cp.getPixels(), 1);
-
-				measuresnakestack.setPixels(measurecp.getPixels(), 1);
-			}
-
-			if (All3DSnakes != null) {
-
-				for (int Listindex = 0; Listindex < All3DSnakes.size(); ++Listindex) {
-
-					SnakeObject SnakeFrame = All3DSnakes.get(Listindex).get(0);
-					int SnakeThirdDim = SnakeFrame.thirdDimension;
-					int SnakeFourthDim = SnakeFrame.fourthDimension;
-
-					if (SnakeThirdDim == thirdDimension && SnakeFourthDim == fourthDimension) {
-						All3DSnakes.remove(Listindex);
-						All3DSnakescopy.remove(Listindex);
-						IJ.log(" Recomputing snakes for currentView");
-
-					}
-				}
-
-			}
-
-			AllSliceSnakes.add(currentsnakes);
-
-			// The graph for this frame along Z is now complete, generate 3D
-			// snake properties
-
-			ArrayList<SnakeObject> ThreedimensionalSnake = getCentreofMass3D();
-
-			All3DSnakes.add(ThreedimensionalSnake);
-			All3DSnakescopy.add(ThreedimensionalSnake);
-			new ImagePlus("Snakes", snakestack).show();
-			snakestack.deleteLastSlice();
-			measuresnakestack.deleteLastSlice();
-			IJ.log("SnakeList Size" + All3DSnakes.size());
-
-			return null;
-		}
-
-		@Override
-		protected void done() {
-			try {
-				jpb.setIndeterminate(false);
-				get();
-				frame.dispose();
-				JOptionPane.showMessageDialog(jpb.getParent(), "Success", "Success", JOptionPane.INFORMATION_MESSAGE);
-			} catch (ExecutionException | InterruptedException e) {
-				e.printStackTrace();
-			}
-
-		}
-
-	}
-
 	public void go() {
 
 		jpb.setIndeterminate(false);
@@ -2508,7 +1510,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		frame.setLocationRelativeTo(panelCont);
 		frame.setVisible(true);
 
-		Progress dosnake = new Progress();
+		Progress dosnake = new Progress(this);
 		dosnake.execute();
 
 	}
@@ -2528,6 +1530,62 @@ public class InteractiveActiveContour_ implements PlugIn {
 			});
 
 		}
+
+	}
+
+	public void displaystack() {
+
+		ImagePlus Localimp = ImageJFunctions.show(originalimgA);
+		ImagePlus Measureimp = ImageJFunctions.show(originalimgB);
+
+		for (int i = thirdDimensionsliderInit; i < thirdDimensionSize; ++i) {
+
+			snakestack.addSlice(Localimp.getImageStack().getProcessor(i).convertToRGB());
+			measuresnakestack.addSlice(Measureimp.getImageStack().getProcessor(i).convertToRGB());
+			cp = (ColorProcessor) (snakestack.getProcessor(i).duplicate());
+
+			ArrayList<Roi> Rois = AllSnakerois.get(i);
+
+			for (int index = 0; index < Rois.size(); ++index) {
+
+				Roi or = Rois.get(index);
+
+				or.setStrokeColor(Color.red);
+
+				cp.setColor(Color.red);
+				cp.setLineWidth(1);
+				cp.draw(or);
+
+			}
+
+			ArrayList<Roi> MeasureRois = AllSnakeMeasurerois.get(i);
+
+			for (int index = 0; index < MeasureRois.size(); ++index) {
+
+				Roi or = MeasureRois.get(index);
+
+				or.setStrokeColor(Color.red);
+
+				measurecp.setColor(Color.red);
+				measurecp.setLineWidth(1);
+				measurecp.draw(or);
+
+			}
+
+			if (snakestack != null)
+
+				snakestack.setPixels(cp.getPixels(), 1);
+
+			if (measuresnakestack != null)
+
+				measuresnakestack.setPixels(measurecp.getPixels(), 1);
+
+			Localimp.hide();
+			Measureimp.hide();
+		}
+
+		new ImagePlus("Snakes", snakestack).show();
+		new ImagePlus("Snakes", measuresnakestack).show();
 
 	}
 
@@ -2743,7 +1801,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	}
 
-	public static float computeSigma2(final float sigma1, final int sensitivity) {
+	public float computeSigma2(final float sigma1, final int sensitivity) {
 		final float k = (float) DetectionSegmentation.computeK(sensitivity);
 		final float[] sigma = DetectionSegmentation.computeSigma(k, sigma1);
 
@@ -2770,27 +1828,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		}
 	}
 
-	/**
-	 * Extract the current 2d region of interest from the souce image
-	 * 
-	 * @param CurrentView
-	 *            - the CurrentView image, a {@link Image} which is a copy of
-	 *            the {@link ImagePlus}
-	 * 
-	 * @return
-	 */
 
-	protected RandomAccessibleInterval<FloatType> extractImage(final RandomAccessibleInterval<FloatType> intervalView) {
-
-		final FloatType type = intervalView.randomAccess().get().createVariable();
-		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
-		RandomAccessibleInterval<FloatType> totalimg = factory.create(intervalView, type);
-
-		final RandomAccessibleInterval<FloatType> img = Views.interval(intervalView, interval);
-		totalimg = Views.interval(Views.extendBorder(img), intervalView);
-
-		return totalimg;
-	}
 
 	/**
 	 * Extract the current 2d region of interest from the image on which
@@ -2964,10 +2002,15 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	}
 
-protected class ChooseWorkspaceListener implements ActionListener {
+	protected class ChooseWorkspaceListener implements ActionListener {
 
+		final TextField filename;
 
-		
+		public ChooseWorkspaceListener(TextField filename) {
+
+			this.filename = filename;
+
+		}
 
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
@@ -2978,46 +2021,22 @@ protected class ChooseWorkspaceListener implements ActionListener {
 			chooserA.showOpenDialog(panelFirst);
 			usefolder = chooserA.getSelectedFile().getAbsolutePath();
 
-		
-
-		}
-
-	}
-
-	protected class ConfirmWorkspaceListener implements ActionListener {
-		
-		final TextField filename;
-		
-		public ConfirmWorkspaceListener(TextField filename){
-			
-			this.filename = filename;
-			
-		}
-		
-		@Override
-		public void actionPerformed(final ActionEvent arg0) {
-			
 			addTrackToName = filename.getText();
-			
-			
+
 		}
-		
-		
-		
-		
+
 	}
-	
-	
+
 	// Making the card
-	JFrame Cardframe = new JFrame("KCell Automated Tracker");
-	JPanel panelCont = new JPanel();
-	JPanel panelFirst = new JPanel();
-	JPanel panelSecond = new JPanel();
-	JPanel panelThird = new JPanel();
-	JPanel panelFourth = new JPanel();
-	JPanel panelFifth = new JPanel();
-	JPanel panelSixth = new JPanel();
-	JPanel panelSeventh = new JPanel();
+	public JFrame Cardframe = new JFrame("KCell Automated Tracker");
+	public JPanel panelCont = new JPanel();
+	public JPanel panelFirst = new JPanel();
+	public JPanel panelSecond = new JPanel();
+	public JPanel panelThird = new JPanel();
+	public JPanel panelFourth = new JPanel();
+	public JPanel panelFifth = new JPanel();
+	public JPanel panelSixth = new JPanel();
+	public JPanel panelSeventh = new JPanel();
 
 	public void Card() {
 
@@ -3043,12 +2062,12 @@ protected class ChooseWorkspaceListener implements ActionListener {
 		final Button JumpSlice = new Button("Jump in fourth dimension to :");
 		final Label timeText = new Label("Third Dimensíonal slice = " + this.thirdDimensionslider, Label.CENTER);
 		final Label sliceText = new Label("Fourth Dimensional slice = " + this.fourthDimensionslider, Label.CENTER);
-		
-		final JButton ChooseWorkspace = new JButton("Choose Workspace");
+
+		final JButton ChooseWorkspace = new JButton("Choose Directory");
 		final JLabel outputfilename = new JLabel("Enter output filename: ");
 		TextField inputField = new TextField();
 		inputField.setColumns(10);
-		final JButton Confirm= new JButton("Confirm Workspace Selection");
+		final JButton Confirm = new JButton("Confirm Directory Selection");
 
 		final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
 				thirdDimensionSize);
@@ -3120,34 +2139,29 @@ protected class ChooseWorkspaceListener implements ActionListener {
 			c.insets = new Insets(0, 225, 0, 225);
 			panelFirst.add(JumpSlice, c);
 		}
-		
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		panelFirst.add(ChooseWorkspace, c);
 
 		++c.gridy;
 		c.insets = new Insets(10, 10, 10, 0);
 		panelFirst.add(outputfilename, c);
-		
+
 		++c.gridy;
 		c.insets = new Insets(10, 10, 10, 0);
 		panelFirst.add(inputField, c);
-		
+
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
-		panelFirst.add(Confirm, c);
+		panelFirst.add(ChooseWorkspace, c);
 
 		panelFirst.setVisible(true);
 
 		cl.show(panelCont, "1");
 
-		mser.addItemListener(new MserListener());
-		dog.addItemListener(new dogListener());
+		mser.addItemListener(new MserListener(this));
+		dog.addItemListener(new DogListener(this));
 
-		Segmser.addItemListener(new SegMserListener());
-		Segdog.addItemListener(new SegDogListener());
-		ChooseWorkspace.addActionListener(new ChooseWorkspaceListener());
-		Confirm.addActionListener(new ConfirmWorkspaceListener(inputField));
+		Segmser.addItemListener(new SegMserListener(this));
+		Segdog.addItemListener(new SegDogListener(this));
+		ChooseWorkspace.addActionListener(new ChooseWorkspaceListener(inputField));
 		JPanel control = new JPanel();
 		control.add(new JButton(new AbstractAction("\u22b2Prev") {
 
@@ -3318,9 +2332,9 @@ protected class ChooseWorkspaceListener implements ActionListener {
 				.addAdjustmentListener(new fourthDimensionsliderListener(sliceText, sliceMin, fourthDimensionSize));
 
 		JumpFrame.addActionListener(
-				new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+				new MoveInThirdDimListener(this, thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
 		JumpSlice.addActionListener(
-				new moveInFourthDimListener(fourthDimensionslider, sliceText, sliceMin, fourthDimensionSize));
+				new MoveInFourthDimListener(this, fourthDimensionslider, sliceText, sliceMin, fourthDimensionSize));
 
 		Singlesnake.addActionListener(new SinglesnakeButtonListener());
 		Redosnake.addActionListener(new SinglesnakeButtonListener());
@@ -3366,7 +2380,6 @@ protected class ChooseWorkspaceListener implements ActionListener {
 			displayimp.setTitle("Display Tracks");
 
 			Overlay o = displayimp.getOverlay();
-			
 
 			if (displayimp.getOverlay() == null) {
 				o = new Overlay();
@@ -3374,9 +2387,8 @@ protected class ChooseWorkspaceListener implements ActionListener {
 			}
 
 			o.clear();
-			
-           Overlay osec = displayimp.getOverlay();
-			
+
+			Overlay osec = displayimp.getOverlay();
 
 			if (displayimp.getOverlay() == null) {
 				osec = new Overlay();
@@ -3384,7 +2396,7 @@ protected class ChooseWorkspaceListener implements ActionListener {
 			}
 
 			osec.clear();
-			
+
 			TrackModel model = new TrackModel(graph);
 			model.getDirectedNeighborIndex();
 
@@ -3392,11 +2404,11 @@ protected class ChooseWorkspaceListener implements ActionListener {
 
 				DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw, true, 0);
 				totaldisplaytracks.getImp();
-				
-				
-				DisplaymodelGraph totaldisplaytracksmeasure = new DisplaymodelGraph(displaymeasureimp, graph, colorDraw, true, 0);
+
+				DisplaymodelGraph totaldisplaytracksmeasure = new DisplaymodelGraph(displaymeasureimp, graph, colorDraw,
+						true, 0);
 				totaldisplaytracksmeasure.getImp();
-				
+
 			}
 
 			else {
@@ -3407,12 +2419,10 @@ protected class ChooseWorkspaceListener implements ActionListener {
 						DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw,
 								false, displaySelectedTrack);
 						totaldisplaytracks.getImp();
-						
-						DisplaymodelGraph totaldisplaymeasuretracks = new DisplaymodelGraph(displaymeasureimp, graph, colorDraw,
-								false, displaySelectedTrack);
+
+						DisplaymodelGraph totaldisplaymeasuretracks = new DisplaymodelGraph(displaymeasureimp, graph,
+								colorDraw, false, displaySelectedTrack);
 						totaldisplaymeasuretracks.getImp();
-						
-						
 
 					}
 
@@ -3507,295 +2517,6 @@ protected class ChooseWorkspaceListener implements ActionListener {
 				updatePreview(ValueChange.SizeY);
 			}
 		}
-	}
-
-	protected class SegDogListener implements ItemListener {
-		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = findBlobsViaSEGMSER;
-
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				findBlobsViaSEGDOG = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
-
-				findBlobsViaSEGDOG = true;
-				findBlobsViaMSER = false;
-				findBlobsViaDOG = false;
-				findBlobsViaSEGMSER = false;
-				updatePreview(ValueChange.ROI);
-
-				panelSecond.removeAll();
-
-				final GridBagLayout layout = new GridBagLayout();
-				final GridBagConstraints c = new GridBagConstraints();
-
-				panelSecond.setLayout(layout);
-				final Label Name = new Label("Step 2", Label.CENTER);
-				panelSecond.add(Name, c);
-				final Label exthresholdText = new Label("threshold = threshold to create Bitimg for watershedding.",
-						Label.CENTER);
-
-				// IJ.log("Determining the initial threshold for the image");
-				// thresholdHoughInit =
-				// GlobalThresholding.AutomaticThresholding(currentPreprocessedimg);
-				final Scrollbar thresholdSHough = new Scrollbar(Scrollbar.HORIZONTAL, thresholdHoughInit, 10, 0,
-						10 + scrollbarSize);
-				thresholdHough = computeValueFromScrollbarPosition(thresholdHoughInit, thresholdHoughMin,
-						thresholdHoughMax, scrollbarSize);
-
-				final Checkbox displayBit = new Checkbox("Display Bitimage ", displayBitimg);
-				final Checkbox displayWatershed = new Checkbox("Display Watershedimage ", displayWatershedimg);
-				final Label thresholdText = new Label("thresholdValue = ", Label.CENTER);
-
-				final Button Dowatershed = new Button("Do watershedding");
-				final Label Segparam = new Label("Determine Threshold level for Segmentation");
-				Segparam.setBackground(new Color(1, 0, 1));
-				Segparam.setForeground(new Color(255, 255, 255));
-
-				/* Location */
-
-				c.fill = GridBagConstraints.HORIZONTAL;
-				c.gridx = 0;
-				c.gridy = 0;
-				c.weightx = 1;
-				c.weighty = 1.5;
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(Segparam, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(exthresholdText, c);
-				++c.gridy;
-
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(thresholdText, c);
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-
-				panelSecond.add(thresholdSHough, c);
-				++c.gridy;
-
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(displayBit, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(displayWatershed, c);
-				++c.gridy;
-				c.insets = new Insets(10, 175, 0, 175);
-				panelSecond.add(Dowatershed, c);
-
-				thresholdSHough.addAdjustmentListener(
-						new ThresholdHoughListener(thresholdText, thresholdHoughMin, thresholdHoughMax));
-
-				displayBit.addItemListener(new ShowBitimgListener());
-				displayWatershed.addItemListener(new ShowwatershedimgListener());
-				Dowatershed.addActionListener(new DowatershedListener());
-
-				final Label DogText = new Label("Use DoG to find Blobs ", Label.CENTER);
-				final Scrollbar sigma1 = new Scrollbar(Scrollbar.HORIZONTAL, sigmaInit, 10, 0, 10 + scrollbarSize);
-
-				final Scrollbar thresholdSsec = new Scrollbar(Scrollbar.HORIZONTAL, thresholdInit, 10, 0,
-						10 + scrollbarSize);
-				sigma = computeValueFromScrollbarPosition(sigmaInit, sigmaMin, sigmaMax, scrollbarSize);
-				threshold = computeValueFromScrollbarPosition(thresholdInit, thresholdMin, thresholdMax, scrollbarSize);
-				sigma2 = computeSigma2(sigma, sensitivity);
-				final int sigma2init = computeScrollbarPositionFromValue(sigma2, sigmaMin, sigmaMax, scrollbarSize);
-				final Scrollbar sigma2S = new Scrollbar(Scrollbar.HORIZONTAL, sigma2init, 10, 0, 10 + scrollbarSize);
-
-				final Label sigmaText1 = new Label("Sigma 1 = " + sigma, Label.CENTER);
-				final Label sigmaText2 = new Label("Sigma 2 = " + sigma2, Label.CENTER);
-
-				final Label thresholdsecText = new Label("Threshold = " + threshold, Label.CENTER);
-
-				final Checkbox min = new Checkbox("Look for Minima (green)", lookForMinima);
-				final Checkbox max = new Checkbox("Look for Maxima (red)", lookForMaxima);
-				final Button DisplayBlobs = new Button("Display Blobs");
-
-				final Label MSparam = new Label("Determine DoG parameters");
-				MSparam.setBackground(new Color(1, 0, 1));
-				MSparam.setForeground(new Color(255, 255, 255));
-				/* Location */
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(MSparam, c);
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(sigma1, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(sigmaText1, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(sigma2S, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(sigmaText2, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 0, 0, 0);
-				panelSecond.add(thresholdSsec, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(thresholdsecText, c);
-
-				++c.gridy;
-				c.insets = new Insets(0, 170, 0, 75);
-				panelSecond.add(min, c);
-
-				++c.gridy;
-				c.insets = new Insets(0, 170, 0, 75);
-				panelSecond.add(max, c);
-
-				++c.gridy;
-				c.insets = new Insets(0, 180, 0, 180);
-				panelSecond.add(DisplayBlobs, c);
-
-				/* Configuration */
-				sigma1.addAdjustmentListener(
-						new SigmaListener(sigmaText1, sigmaMin, sigmaMax, scrollbarSize, sigma1, sigma2S, sigmaText2));
-				sigma2S.addAdjustmentListener(
-						new Sigma2Listener(sigmaMin, sigmaMax, scrollbarSize, sigma2S, sigmaText2));
-				thresholdSsec
-						.addAdjustmentListener(new ThresholdListener(thresholdsecText, thresholdMin, thresholdMax));
-				min.addItemListener(new MinListener());
-				max.addItemListener(new MaxListener());
-				DisplayBlobs.addActionListener(new DisplaysegBlobsListener());
-				panelSecond.repaint();
-				panelSecond.validate();
-				Cardframe.pack();
-			}
-
-			if (findBlobsViaSEGDOG != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.FindBlobsVia);
-			}
-		}
-	}
-
-	protected class dogListener implements ItemListener {
-
-		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-
-			boolean oldState = findBlobsViaDOG;
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				findBlobsViaDOG = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
-
-				findBlobsViaDOG = true;
-				findBlobsViaMSER = false;
-				updatePreview(ValueChange.ROI);
-
-				panelSecond.removeAll();
-
-				final GridBagLayout layout = new GridBagLayout();
-				final GridBagConstraints c = new GridBagConstraints();
-
-				panelSecond.setLayout(layout);
-				final Label Name = new Label("Step 2", Label.CENTER);
-				panelSecond.add(Name, c);
-				final Label DogText = new Label("Use DoG to find Blobs ", Label.CENTER);
-				final Scrollbar sigma1 = new Scrollbar(Scrollbar.HORIZONTAL, sigmaInit, 10, 0, 10 + scrollbarSize);
-
-				final Scrollbar thresholdS = new Scrollbar(Scrollbar.HORIZONTAL, thresholdInit, 10, 0,
-						10 + scrollbarSize);
-				sigma = computeValueFromScrollbarPosition(sigmaInit, sigmaMin, sigmaMax, scrollbarSize);
-				threshold = computeValueFromScrollbarPosition(thresholdInit, thresholdMin, thresholdMax, scrollbarSize);
-				sigma2 = computeSigma2(sigma, sensitivity);
-				final int sigma2init = computeScrollbarPositionFromValue(sigma2, sigmaMin, sigmaMax, scrollbarSize);
-				final Scrollbar sigma2S = new Scrollbar(Scrollbar.HORIZONTAL, sigma2init, 10, 0, 10 + scrollbarSize);
-
-				final Label sigmaText1 = new Label("Sigma 1 = " + sigma, Label.CENTER);
-				final Label sigmaText2 = new Label("Sigma 2 = " + sigma2, Label.CENTER);
-
-				final Label thresholdText = new Label("Threshold = " + threshold, Label.CENTER);
-
-				final Checkbox min = new Checkbox("Look for Minima (green)", lookForMinima);
-				final Checkbox max = new Checkbox("Look for Maxima (red)", lookForMaxima);
-				final Button DisplayBlobs = new Button("Display Blobs");
-
-				final Label MSparam = new Label("Determine DoG parameters");
-				MSparam.setBackground(new Color(1, 0, 1));
-				MSparam.setForeground(new Color(255, 255, 255));
-				/* Location */
-				panelSecond.setLayout(layout);
-
-				c.fill = GridBagConstraints.HORIZONTAL;
-				c.gridx = 0;
-				c.gridy = 0;
-				c.weightx = 4;
-				c.weighty = 1.5;
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(MSparam, c);
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(sigma1, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(sigmaText1, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(sigma2S, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(sigmaText2, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 0, 0, 0);
-				panelSecond.add(thresholdS, c);
-
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(thresholdText, c);
-
-				++c.gridy;
-				c.insets = new Insets(0, 170, 0, 75);
-				panelSecond.add(min, c);
-
-				++c.gridy;
-				c.insets = new Insets(0, 170, 0, 75);
-				panelSecond.add(max, c);
-
-				++c.gridy;
-				c.insets = new Insets(0, 180, 0, 180);
-				panelSecond.add(DisplayBlobs, c);
-
-				/* Configuration */
-				sigma1.addAdjustmentListener(
-						new SigmaListener(sigmaText1, sigmaMin, sigmaMax, scrollbarSize, sigma1, sigma2S, sigmaText2));
-				sigma2S.addAdjustmentListener(
-						new Sigma2Listener(sigmaMin, sigmaMax, scrollbarSize, sigma2S, sigmaText2));
-				thresholdS.addAdjustmentListener(new ThresholdListener(thresholdText, thresholdMin, thresholdMax));
-				min.addItemListener(new MinListener());
-				max.addItemListener(new MaxListener());
-				DisplayBlobs.addActionListener(new DisplayBlobsListener());
-				panelSecond.repaint();
-				panelSecond.validate();
-				Cardframe.pack();
-			}
-
-			if (findBlobsViaDOG != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.FindBlobsVia);
-			}
-		}
-
 	}
 
 	protected class NNListener implements ItemListener {
@@ -4265,27 +2986,8 @@ protected class ChooseWorkspaceListener implements ActionListener {
 				enableSigma2 = false;
 			} else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 				sigmaText2.setFont(sigmaText2.getFont().deriveFont(Font.BOLD));
-				sigma2.setBackground(originalColor);
+				sigma2.setBackground(Color.WHITE);
 				enableSigma2 = true;
-			}
-		}
-	}
-
-	protected class MinListener implements ItemListener {
-		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = lookForMinima;
-
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				lookForMinima = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED)
-				lookForMinima = true;
-
-			if (lookForMinima != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.MINMAX);
 			}
 		}
 	}
@@ -4327,113 +3029,6 @@ protected class ChooseWorkspaceListener implements ActionListener {
 				SaveXLS = true;
 
 		}
-
-	}
-
-	protected class MaxListener implements ItemListener {
-		@Override
-		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = lookForMaxima;
-
-			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				lookForMaxima = false;
-			else if (arg0.getStateChange() == ItemEvent.SELECTED)
-				lookForMaxima = true;
-
-			if (lookForMaxima != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.MINMAX);
-
-			}
-		}
-	}
-
-	public ArrayList<Roi> getcurrentRois(ArrayList<RefinedPeak<Point>> peaks) {
-
-		ArrayList<Roi> Allrois = new ArrayList<Roi>();
-
-		for (final RefinedPeak<Point> peak : peaks) {
-			float x = (float) (peak.getFloatPosition(0));
-			float y = (float) (peak.getFloatPosition(1));
-
-			final OvalRoi or = new OvalRoi(Util.round(x - sigma), Util.round(y - sigma), Util.round(sigma + sigma2),
-					Util.round(sigma + sigma2));
-
-			Allrois.add(or);
-
-		}
-
-		return Allrois;
-
-	}
-
-	public ArrayList<Roi> getcurrentRois(MserTree<UnsignedByteType> newtree) {
-
-		final HashSet<Mser<UnsignedByteType>> rootset = newtree.roots();
-
-		ArrayList<Roi> Allrois = new ArrayList<Roi>();
-		final Iterator<Mser<UnsignedByteType>> rootsetiterator = rootset.iterator();
-
-		AllmeanCovar = new ArrayList<double[]>();
-
-		while (rootsetiterator.hasNext()) {
-
-			Mser<UnsignedByteType> rootmser = rootsetiterator.next();
-
-			if (rootmser.size() > 0) {
-
-				final double[] meanandcov = { rootmser.mean()[0], rootmser.mean()[1], rootmser.cov()[0],
-						rootmser.cov()[1], rootmser.cov()[2] };
-				AllmeanCovar.add(meanandcov);
-
-			}
-		}
-
-		// We do this so the ROI remains attached the the same label and is not
-		// changed if the program is run again
-		SortListbyproperty.sortpointList(AllmeanCovar);
-		for (int index = 0; index < AllmeanCovar.size(); ++index) {
-
-			final double[] mean = { AllmeanCovar.get(index)[0], AllmeanCovar.get(index)[1] };
-			final double[] covar = { AllmeanCovar.get(index)[2], AllmeanCovar.get(index)[3],
-					AllmeanCovar.get(index)[4] };
-
-			EllipseRoi roi = createEllipse(mean, covar, 3);
-			Allrois.add(roi);
-
-		}
-
-		return Allrois;
-
-	}
-
-	public ArrayList<double[]> getRoiMean(MserTree<UnsignedByteType> newtree) {
-
-		final HashSet<Mser<UnsignedByteType>> rootset = newtree.roots();
-
-		final Iterator<Mser<UnsignedByteType>> rootsetiterator = rootset.iterator();
-
-		AllmeanCovar = new ArrayList<double[]>();
-
-		while (rootsetiterator.hasNext()) {
-
-			Mser<UnsignedByteType> rootmser = rootsetiterator.next();
-
-			if (rootmser.size() > 0) {
-
-				final double[] meanandcov = { rootmser.mean()[0], rootmser.mean()[1] };
-				AllmeanCovar.add(meanandcov);
-
-			}
-		}
-
-		// We do this so the ROI remains attached the the same label and is not
-		// changed if the program is run again
-		SortListbyproperty.sortpointList(AllmeanCovar);
-
-		return AllmeanCovar;
 
 	}
 
@@ -4541,249 +3136,7 @@ protected class ChooseWorkspaceListener implements ActionListener {
 
 	}
 
-	protected class DeltaListener implements AdjustmentListener {
-		final Label label;
-		final float min, max;
-		final int scrollbarSize;
-
-		final Scrollbar deltaScrollbar;
-
-		public DeltaListener(final Label label, final float min, final float max, final int scrollbarSize,
-				final Scrollbar deltaScrollbar) {
-			this.label = label;
-			this.min = min;
-			this.max = max;
-			this.scrollbarSize = scrollbarSize;
-
-			this.deltaScrollbar = deltaScrollbar;
-
-		}
-
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			delta = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
-
-			deltaScrollbar.setValue(computeScrollbarPositionFromValue(delta, min, max, scrollbarSize));
-
-			label.setText("Delta = " + delta);
-
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.DELTA);
-			}
-		}
-	}
-
-	protected class minSizeListener implements AdjustmentListener {
-		final Label label;
-		final float min, max;
-		final int scrollbarSize;
-
-		final Scrollbar minsizeScrollbar;
-
-		public minSizeListener(final Label label, final float min, final float max, final int scrollbarSize,
-				final Scrollbar minsizeScrollbar) {
-			this.label = label;
-			this.min = min;
-			this.max = max;
-			this.scrollbarSize = scrollbarSize;
-
-			this.minsizeScrollbar = minsizeScrollbar;
-
-		}
-
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			minSize = (int) computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
-
-			minsizeScrollbar.setValue(computeScrollbarPositionFromValue(minSize, min, max, scrollbarSize));
-
-			label.setText("MinSize = " + minSize);
-
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.MINSIZE);
-			}
-		}
-	}
-
-	protected class maxSizeListener implements AdjustmentListener {
-		final Label label;
-		final float min, max;
-		final int scrollbarSize;
-
-		final Scrollbar maxsizeScrollbar;
-
-		public maxSizeListener(final Label label, final float min, final float max, final int scrollbarSize,
-				final Scrollbar maxsizeScrollbar) {
-			this.label = label;
-			this.min = min;
-			this.max = max;
-			this.scrollbarSize = scrollbarSize;
-
-			this.maxsizeScrollbar = maxsizeScrollbar;
-
-		}
-
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			maxSize = (int) computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
-
-			maxsizeScrollbar.setValue(computeScrollbarPositionFromValue(maxSize, min, max, scrollbarSize));
-
-			label.setText("MaxSize = " + maxSize);
-
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.MAXSIZE);
-			}
-		}
-	}
-
-	protected class maxVarListener implements AdjustmentListener {
-		final Label label;
-		final float min, max;
-		final int scrollbarSize;
-
-		final Scrollbar maxVarScrollbar;
-
-		public maxVarListener(final Label label, final float min, final float max, final int scrollbarSize,
-				final Scrollbar maxVarScrollbar) {
-			this.label = label;
-			this.min = min;
-			this.max = max;
-			this.scrollbarSize = scrollbarSize;
-			this.maxVarScrollbar = maxVarScrollbar;
-
-		}
-
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			maxVar = (computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize));
-
-			maxVarScrollbar.setValue(computeScrollbarPositionFromValue((float) maxVar, min, max, scrollbarSize));
-
-			label.setText("MaxVar = " + maxVar);
-
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.MAXVAR);
-			}
-		}
-	}
-
-	protected class minDiversityListener implements AdjustmentListener {
-		final Label label;
-		final float min, max;
-		final int scrollbarSize;
-
-		final Scrollbar minDiversityScrollbar;
-
-		public minDiversityListener(final Label label, final float min, final float max, final int scrollbarSize,
-				final Scrollbar minDiversityScrollbar) {
-			this.label = label;
-			this.min = min;
-			this.max = max;
-			this.scrollbarSize = scrollbarSize;
-			this.minDiversityScrollbar = minDiversityScrollbar;
-
-		}
-
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			minDiversity = (computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize));
-
-			minDiversityScrollbar
-					.setValue(computeScrollbarPositionFromValue((float) minDiversity, min, max, scrollbarSize));
-
-			label.setText("MinDiversity = " + minDiversity);
-
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.MINDIVERSITY);
-			}
-		}
-	}
-
-	/**
-	 * Generic, type-agnostic method to create an identical copy of an Img
-	 *
-	 * @param currentPreprocessedimg2
-	 *            - the Img to copy
-	 * @return - the copy of the Img
-	 */
-	public Img<UnsignedByteType> copytoByteImage(final RandomAccessibleInterval<FloatType> input) {
-		// create a new Image with the same properties
-		// note that the input provides the size for the new image as it
-		// implements
-		// the Interval interface
-		RandomAccessibleInterval<FloatType> inputcopy = copyImage(input);
-		Normalize.normalize(Views.iterable(inputcopy), new FloatType(0), new FloatType(255));
-		final UnsignedByteType type = new UnsignedByteType();
-		final ImgFactory<UnsignedByteType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(inputcopy, type);
-		final Img<UnsignedByteType> output = factory.create(inputcopy, type);
-		// create a cursor for both images
-		RandomAccess<FloatType> ranac = inputcopy.randomAccess();
-		Cursor<UnsignedByteType> cursorOutput = output.cursor();
-
-		// iterate over the input
-		while (cursorOutput.hasNext()) {
-			// move both cursors forward by one pixel
-			cursorOutput.fwd();
-
-			ranac.setPosition(cursorOutput);
-
-			// set the value of this pixel of the output image to the same as
-			// the input,
-			// every Type supports T.set( T type )
-			cursorOutput.get().set((int) ranac.get().get());
-		}
-
-		// return the copy
-		return output;
-	}
-
-	public Img<FloatType> copyImage(final RandomAccessibleInterval<FloatType> input) {
-		// create a new Image with the same dimensions but the other imgFactory
-		// note that the input provides the size for the new image by
-		// implementing the Interval interface
-		Img<FloatType> output = new ArrayImgFactory<FloatType>().create(input, Views.iterable(input).firstElement());
-
-		// create a cursor that automatically localizes itself on every move
-		Cursor<FloatType> cursorInput = Views.iterable(input).localizingCursor();
-		RandomAccess<FloatType> randomAccess = output.randomAccess();
-
-		// iterate over the input cursor
-		while (cursorInput.hasNext()) {
-			// move input cursor forward
-			cursorInput.fwd();
-
-			// set the output cursor to the position of the input cursor
-			randomAccess.setPosition(cursorInput);
-
-			// set the value of this pixel of the output image, every Type
-			// supports T.set( T type )
-			randomAccess.get().set(cursorInput.get());
-		}
-
-		// return the copy
-		return output;
-	}
+	
 
 	/**
 	 * 2D correlated Gaussian
@@ -4858,7 +3211,7 @@ protected class ChooseWorkspaceListener implements ActionListener {
 
 			for (int frame = 0; frame < thirdDimensionSize; ++frame)
 
-			IJ.log("Tracking Complete " + " " + "Displaying results");
+				IJ.log("Tracking Complete " + " " + "Displaying results");
 
 			ImagePlus totalimp = ImageJFunctions.show(originalimgA);
 
@@ -4997,7 +3350,7 @@ protected class ChooseWorkspaceListener implements ActionListener {
 				}
 
 			};
-			
+
 			Collections.sort(IDALL, Seedidcomparison);
 			for (int index = 0; index < IDALL.size(); ++index) {
 
@@ -5011,6 +3364,7 @@ protected class ChooseWorkspaceListener implements ActionListener {
 			Done.setBackground(new Color(1, 0, 1));
 			Done.setForeground(new Color(255, 255, 255));
 
+			panelSeventh.removeAll();
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 50);
 			panelSeventh.add(lbl, c);
@@ -5030,6 +3384,8 @@ protected class ChooseWorkspaceListener implements ActionListener {
 			cbtrack.addActionListener(new TrackDisplayListener(cbtrack, originalimgA));
 			Exit.addActionListener(new FinishedButtonListener(Cardframe, true));
 
+			panelSeventh.repaint();
+			panelSeventh.validate();
 			Cardframe.pack();
 
 		}
@@ -5153,97 +3509,8 @@ protected class ChooseWorkspaceListener implements ActionListener {
 		isFinished = true;
 	}
 
-	protected class Sigma2Listener implements AdjustmentListener {
-		final float min, max;
-		final int scrollbarSize;
-
-		final Scrollbar sigmaScrollbar2;
-		final Label sigma2Label;
-
-		public Sigma2Listener(final float min, final float max, final int scrollbarSize,
-				final Scrollbar sigmaScrollbar2, final Label sigma2Label) {
-			this.min = min;
-			this.max = max;
-			this.scrollbarSize = scrollbarSize;
-
-			this.sigmaScrollbar2 = sigmaScrollbar2;
-			this.sigma2Label = sigma2Label;
-		}
-
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			if (enableSigma2) {
-				sigma2 = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
-
-				if (sigma2 < sigma) {
-					sigma2 = sigma + 0.001f;
-					sigmaScrollbar2.setValue(computeScrollbarPositionFromValue(sigma2, min, max, scrollbarSize));
-				}
-
-				sigma2Label.setText("Sigma 2 = " + sigma2);
-
-				if (!event.getValueIsAdjusting()) {
-					while (isComputing) {
-						SimpleMultiThreading.threadWait(10);
-					}
-					updatePreview(ValueChange.SIGMA);
-				}
-
-			} else {
-				// if no manual adjustment simply reset it
-				sigmaScrollbar2.setValue(computeScrollbarPositionFromValue(sigma2, min, max, scrollbarSize));
-			}
-		}
-	}
-
-	protected class SigmaListener implements AdjustmentListener {
-		final Label label;
-		final float min, max;
-		final int scrollbarSize;
-
-		final Scrollbar sigmaScrollbar1;
-		final Scrollbar sigmaScrollbar2;
-		final Label sigmaText2;
-
-		public SigmaListener(final Label label, final float min, final float max, final int scrollbarSize,
-				final Scrollbar sigmaScrollbar1, final Scrollbar sigmaScrollbar2, final Label sigmaText2) {
-			this.label = label;
-			this.min = min;
-			this.max = max;
-			this.scrollbarSize = scrollbarSize;
-
-			this.sigmaScrollbar1 = sigmaScrollbar1;
-			this.sigmaScrollbar2 = sigmaScrollbar2;
-			this.sigmaText2 = sigmaText2;
-		}
-
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			sigma = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
-
-			if (!enableSigma2) {
-				sigma2 = computeSigma2(sigma, sensitivity);
-				sigmaText2.setText("Sigma 2 = " + sigma2);
-				sigmaScrollbar2.setValue(computeScrollbarPositionFromValue(sigma2, min, max, scrollbarSize));
-			} else if (sigma > sigma2) {
-				sigma = sigma2 - 0.001f;
-				sigmaScrollbar1.setValue(computeScrollbarPositionFromValue(sigma, min, max, scrollbarSize));
-			}
-
-			label.setText("Sigma 1 = " + sigma);
-
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.SIGMA);
-			}
-		}
-	}
-
-	protected static float computeValueFromScrollbarPosition(final int scrollbarPosition, final float min,
-			final float max, final int scrollbarSize) {
+	public float computeValueFromScrollbarPosition(final int scrollbarPosition, final float min, final float max,
+			final int scrollbarSize) {
 		return min + (scrollbarPosition / (float) scrollbarSize) * (max - min);
 	}
 
@@ -5252,66 +3519,14 @@ protected class ChooseWorkspaceListener implements ActionListener {
 		return min + (scrollbarPosition / (max)) * (max - min);
 	}
 
-	protected static int computeScrollbarPositionFromValue(final float sigma, final float min, final float max,
+	public int computeScrollbarPositionFromValue(final float sigma, final float min, final float max,
 			final int scrollbarSize) {
 		return Util.round(((sigma - min) / (max - min)) * scrollbarSize);
 	}
 
-	protected static int computeIntScrollbarPositionFromValue(final float thirdDimensionslider, final float min,
-			final float max, final int scrollbarSize) {
+	public int computeIntScrollbarPositionFromValue(final float thirdDimensionslider, final float min, final float max,
+			final int scrollbarSize) {
 		return Util.round(((thirdDimensionslider - min) / (max - min)) * max);
-	}
-
-	protected class ThresholdListener implements AdjustmentListener {
-		final Label label;
-		final float min, max;
-
-		public ThresholdListener(final Label label, final float min, final float max) {
-			this.label = label;
-			this.min = min;
-			this.max = max;
-		}
-
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			threshold = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
-			label.setText("Threshold = " + threshold);
-
-			if (!isComputing) {
-				updatePreview(ValueChange.THRESHOLD);
-			} else if (!event.getValueIsAdjusting()) {
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.THRESHOLD);
-			}
-		}
-	}
-
-	protected class ThresholdHoughListener implements AdjustmentListener {
-		final Label label;
-		final float min, max;
-
-		public ThresholdHoughListener(final Label label, final float min, final float max) {
-			this.label = label;
-			this.min = min;
-			this.max = max;
-		}
-
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			thresholdHough = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
-			label.setText("Threshold = " + thresholdHough);
-
-			if (!isComputing) {
-				updatePreview(ValueChange.THRESHOLD);
-			} else if (!event.getValueIsAdjusting()) {
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.THRESHOLD);
-			}
-		}
 	}
 
 	protected class thirdDimensionsliderListener implements AdjustmentListener {
@@ -5385,46 +3600,10 @@ protected class ChooseWorkspaceListener implements ActionListener {
 		}
 	}
 
-	public double[] getCenter(Roi roi) {
-
-		double[] center = new double[3];
-
-		long[] maxVal = { Long.MIN_VALUE, Long.MIN_VALUE };
-		long[] minVal = { Long.MAX_VALUE, Long.MAX_VALUE };
-		int n = currentimg.numDimensions();
-		Cursor<FloatType> currentcursor = Views.iterable(currentimg).localizingCursor();
-		while (currentcursor.hasNext()) {
-
-			currentcursor.fwd();
-
-			int x = currentcursor.getIntPosition(0);
-			int y = currentcursor.getIntPosition(1);
-
-			if (roi.contains(x, y)) {
-
-				for (int d = 0; d < n; ++d) {
-					final long p = currentcursor.getLongPosition(d);
-					if (p > maxVal[d])
-						maxVal[d] = p;
-					if (p < minVal[d])
-						minVal[d] = p;
-
-				}
-
-			}
-
-		}
-
-		center[0] = (minVal[0] + maxVal[0]) / 2;
-		center[1] = (minVal[1] + maxVal[1]) / 2;
-		center[2] = 0;
-
-		return center;
-
-	}
+	
 
 	/** The name of the frame feature. */
-	public static final String SNAKEPROGRESS = "SNAKEPROGRESS";
+	public final String SNAKEPROGRESS = "SNAKEPROGRESS";
 
 	public final Double getFeature(final String feature) {
 		return features.get(feature);

@@ -91,7 +91,6 @@ import net.imglib2.view.Views;
 import snakes.InteractiveActiveContour_.ImagePlusListener;
 import snakes.InteractiveActiveContour_.RoiListener;
 import snakes.InteractiveActiveContour_.ValueChange;
-import snakes.InteractiveActiveContour_.moveInThirdDimListener;
 import snakes.InteractiveActiveContour_.thirdDimensionsliderListener;
 
 public class InteractiveSingleCell_ implements PlugIn {
@@ -972,6 +971,13 @@ public class InteractiveSingleCell_ implements PlugIn {
 			thirdDimension = thirdDimensionsliderInit;
 			
 			CurrentView = util.FindersUtils.getCurrentView(originalimgA, thirdDimension);
+			
+		
+			if (rt==null){
+				
+				rt = new ResultsTable();
+			}
+			
 			updatePreview(ValueChange.THIRDDIM);
 			CardLayout cl = (CardLayout) panelCont.getLayout();
 			cl.next(panelCont);

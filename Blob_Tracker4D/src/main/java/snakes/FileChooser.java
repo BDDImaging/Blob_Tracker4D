@@ -84,9 +84,6 @@ public class FileChooser extends JPanel {
 		c.insets = new Insets(0, 170, 0, 75);
 		frame.add(Measure, c);
 
-		++c.gridy;
-		c.insets = new Insets(0, 170, 0, 75);
-		frame.add(StartText, c);
 
 		
 
@@ -145,7 +142,6 @@ public class FileChooser extends JPanel {
 				System.out.println("No Selection ");
 			}
 
-			Done(parent, wasDone);
 		}
 
 	}

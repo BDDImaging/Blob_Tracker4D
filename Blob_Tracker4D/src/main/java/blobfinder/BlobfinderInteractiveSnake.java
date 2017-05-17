@@ -381,7 +381,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 				jpb.setValue((int) percent);
 				jpb.setOpaque(true);
 				jpb.setStringPainted(true);
-				jpb.setString("3D point = " + thirdDimension + "/" + duration);
+				jpb.setString("Current time point = " + thirdDimension + "/" + duration);
 				}
 			}
 
