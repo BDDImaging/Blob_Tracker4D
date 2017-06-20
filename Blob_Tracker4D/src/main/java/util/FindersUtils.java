@@ -344,7 +344,7 @@ public class FindersUtils {
 
 	public static RandomAccessibleInterval<FloatType> extractImage(
 			final RandomAccessibleInterval<FloatType> intervalView, FinalInterval interval) {
-
+/*
 		final FloatType type = intervalView.randomAccess().get().createVariable();
 		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
 		RandomAccessibleInterval<FloatType> totalimg = factory.create(intervalView, type);
@@ -383,10 +383,55 @@ public class FindersUtils {
 		
 		
 		//totalimg = Views.interval(Views.extendBorder(img), intervalView);
-
-		return outimg;
+*/
+		return intervalView;
 	}
 
+	public static RandomAccessibleInterval<FloatType> oldextractImage(
+			final RandomAccessibleInterval<FloatType> intervalView, FinalInterval interval) {
+
+		final FloatType type = intervalView.randomAccess().get().createVariable();
+		final ImgFactory<FloatType> factory = net.imglib2.util.Util.getArrayOrCellImgFactory(intervalView, type);
+		RandomAccessibleInterval<FloatType> totalimg = factory.create(intervalView, type);
+
+		final RandomAccessibleInterval<FloatType> img = Views.interval(intervalView, interval);
+		double[] newmin = Transformback(new double[]{img.min(0), img.min(1)}, 
+				new double[]{totalimg.dimension(0), totalimg.dimension(1)},
+				new double[]{img.min(0), img.min(1)},
+				new double[]{img.max(0), img.max(1)});
+		
+		double[] newmax = Transformback(new double[]{img.max(0), img.max(1)}, 
+				new double[]{totalimg.dimension(0), totalimg.dimension(1)},
+				new double[]{totalimg.min(0), totalimg.min(1)},
+				new double[]{totalimg.max(0), totalimg.max(1)});
+		long[] newminlong = new long[]{Math.round(newmin[0]), Math.round(newmin[1])};
+		long[] newmaxlong = new long[]{Math.round(newmax[0]), Math.round(newmax[1])};
+		
+		RandomAccessibleInterval<FloatType> outimg = factory.create(new FinalInterval(newminlong, newmaxlong), type);
+		RandomAccess<FloatType> ranac = outimg.randomAccess();
+		final Cursor<FloatType> cursor = Views.iterable(img).localizingCursor();
+		
+		while(cursor.hasNext()){
+			
+			cursor.fwd();
+			
+			double[] newlocation = Transformback(new double[]{cursor.getDoublePosition(0), cursor.getDoublePosition(1)}, 
+					new double[]{totalimg.dimension(0), totalimg.dimension(1)},
+					new double[]{totalimg.min(0), totalimg.min(1)},
+					new double[]{totalimg.max(0), totalimg.max(1)});
+			long[] newlocationlong = new long[]{Math.round(newlocation[0]), Math.round(newlocation[1])};
+			ranac.setPosition(newlocationlong);
+			ranac.get().set(cursor.get());
+			
+		}
+		
+		
+		
+		totalimg = Views.interval(Views.extendBorder(img), intervalView);
+
+		return intervalView;
+	}
+	
 	/**
 	 * Generic, type-agnostic method to create an identical copy of an Img
 	 *
@@ -418,7 +463,7 @@ public class FindersUtils {
 			// set the value of this pixel of the output image to the same as
 			// the input,
 			// every Type supports T.set( T type )
-			cursorOutput.get().set((int) ranac.get().get());
+			cursorOutput.get().set((int) Math.round(ranac.get().get()));
 		}
 
 		// return the copy

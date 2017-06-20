@@ -36,7 +36,7 @@ public class MserListener implements ItemListener {
 
 			parent.findBlobsViaMSER = true;
 			parent.findBlobsViaDOG = false;
-			parent.updatePreview(ValueChange.ROI);
+			parent.updatePreview(ValueChange.THIRDDIM);
 
 			parent.panelSecond.removeAll();
 
@@ -125,9 +125,7 @@ public class MserListener implements ItemListener {
 			parent.panelSecond.add(maxSizeS, c);
 
 			
-			++c.gridy;
-			c.insets = new Insets(10, 10, 0, 0);
-			parent.panelSecond.add(ComputeTree, c);
+			
 
 			deltaS.addAdjustmentListener(new DeltaListener(parent, deltaText, parent.deltaMin, parent.deltaMax, parent.scrollbarSize, deltaS));
 
@@ -143,18 +141,13 @@ public class MserListener implements ItemListener {
 			maxSizeS.addAdjustmentListener(
 					new MaxSizeListener(parent, maxSizeText, parent.maxSizemin, parent.maxSizemax, parent.scrollbarSize, maxSizeS));
 
-			ComputeTree.addActionListener(new ComputeTreeListener(parent));
 			parent.panelSecond.repaint();
 			parent.panelSecond.validate();
 			parent.Cardframe.pack();
+			parent.updatePreview(ValueChange.SHOWMSER);
 		}
 
-		if (parent.findBlobsViaMSER != oldState) {
-			while (parent.isComputing)
-				SimpleMultiThreading.threadWait(10);
-
-			parent.updatePreview(ValueChange.FindBlobsVia);
-		}
+		
 	}
 	
 

@@ -507,8 +507,7 @@ public class ABSnakeFast {
 						temp[ii].y = points[i - 1].y + k * Dmoy * Ta.y;
 						ii++;
 						temp[ii] = new Point2d();
-						if (ii >= NMAX / 2)
-							break;
+						
 					}
 				}
 				i++;
@@ -524,8 +523,7 @@ public class ABSnakeFast {
 					ii++;
 					temp[ii] = new Point2d();
 					i = j + 1;
-					if (ii >= NMAX / 2)
-						break;
+					
 				}
 				if (i == NPT - 1) {
 					i = NPT;

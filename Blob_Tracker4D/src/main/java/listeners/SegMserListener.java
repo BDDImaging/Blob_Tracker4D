@@ -37,7 +37,7 @@ public class SegMserListener implements ItemListener {
 			parent.findBlobsViaSEGDOG = true;
 			parent.findBlobsViaMSER = false;
 			parent.findBlobsViaDOG = false;
-			parent.updatePreview(ValueChange.ROI);
+			parent.updatePreview(ValueChange.THIRDDIM);
 
 			parent.panelSecond.removeAll();
 

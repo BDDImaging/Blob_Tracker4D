@@ -25,7 +25,7 @@ public class MaxVarListener implements AdjustmentListener {
 		this.parent = parent;
 		this.scrollbarSize = scrollbarSize;
 		this.MaxVarScrollbar = MaxVarScrollbar;
-
+		MaxVarScrollbar.addMouseListener( new StandardMouseListener( parent, ValueChange.SHOWMSER ) );
 	}
 	
 	
@@ -39,12 +39,6 @@ public class MaxVarListener implements AdjustmentListener {
 
 		label.setText("Unstability Score = " + parent.maxVar);
 
-		// if ( !event.getValueIsAdjusting() )
-		{
-			while (parent.isComputing) {
-				SimpleMultiThreading.threadWait(10);
-			}
-			parent.updatePreview(ValueChange.MAXVAR);
-		}
+		
 	}
 }

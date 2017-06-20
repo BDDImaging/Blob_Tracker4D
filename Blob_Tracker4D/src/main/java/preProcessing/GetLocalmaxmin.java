@@ -119,7 +119,7 @@ public class GetLocalmaxmin {
 
 			outbound.setPosition(bound);
 			if (bound.get().get() > 0){
-        if (bound.get().get()>ThresholdValue){
+        if (bound.get().getRealDouble() >ThresholdValue){
 
 				bound.localize(backpos);
 
@@ -819,33 +819,30 @@ public class GetLocalmaxmin {
 	public static void ThresholdingBit(RandomAccessibleInterval<UnsignedByteType> img,
 			RandomAccessibleInterval<BitType> imgout, float thresholdHough) {
 
-		final double[] backpos = new double[imgout.numDimensions()];
 		final Cursor<UnsignedByteType> bound = Views.iterable(img).localizingCursor();
 
-		final RandomAccess<BitType> outbound = imgout.randomAccess();
+		final Cursor<BitType> outbound = Views.iterable(imgout).localizingCursor();
 
 		while (bound.hasNext()) {
 
-			bound.fwd();
 
-			outbound.setPosition(bound);
-			if (bound.get().get() > 0){
+			UnsignedByteType pixelValue = bound.next();
+			BitType thresholdValue = outbound.next();			
 				
-             if (bound.get().get()> thresholdHough){
+             if (pixelValue.getRealDouble() < thresholdHough){
 
-				bound.localize(backpos);
 
-				outbound.get().setReal(255);
+            	 thresholdValue.setReal(0);
 
 			}
 
 			else {
 
-				outbound.get().setZero();
+				thresholdValue.setReal(255);
 
 			}
         
-			}
+			
 
 		}
 		

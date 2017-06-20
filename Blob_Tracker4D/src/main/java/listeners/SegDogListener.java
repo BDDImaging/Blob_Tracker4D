@@ -39,7 +39,7 @@ public class SegDogListener implements ItemListener {
 			parent.findBlobsViaMSER = false;
 			parent.findBlobsViaDOG = false;
 			parent.findBlobsViaSEGMSER = false;
-			parent.updatePreview(ValueChange.ROI);
+			parent.updatePreview(ValueChange.THIRDDIM);
 
 			parent.panelSecond.removeAll();
 

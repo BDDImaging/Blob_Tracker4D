@@ -25,6 +25,7 @@ public class MaxSizeListener implements AdjustmentListener {
 		this.scrollbarSize = scrollbarSize;
         this.parent = parent;
 		this.maxsizeScrollbar = maxsizeScrollbar;
+		maxsizeScrollbar.addMouseListener( new StandardMouseListener( parent, ValueChange.SHOWMSER ) );
 
 	}
 
@@ -36,12 +37,6 @@ public class MaxSizeListener implements AdjustmentListener {
 
 		label.setText("Max # of pixels inside MSER Ellipses = "+ parent.maxSize);
 
-		// if ( !event.getValueIsAdjusting() )
-		{
-			while (parent.isComputing) {
-				SimpleMultiThreading.threadWait(10);
-			}
-			parent.updatePreview(ValueChange.MAXSIZE);
-		}
+		
 	}
 }

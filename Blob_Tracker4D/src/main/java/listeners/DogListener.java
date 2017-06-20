@@ -36,7 +36,7 @@ public class DogListener implements ItemListener {
 
 			parent.findBlobsViaDOG = true;
 			parent.findBlobsViaMSER = false;
-			parent.updatePreview(ValueChange.ROI);
+			parent.updatePreview(ValueChange.THIRDDIM);
 
 			parent.panelSecond.removeAll();
 

@@ -105,7 +105,6 @@ import ij.measure.ResultsTable;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.RoiManager;
 import ij.process.ColorProcessor;
-
 import kdTreeBlobs.FlagNode;
 import kdTreeBlobs.NNFlagsearchKDtree;
 import listeners.DogListener;
@@ -245,6 +244,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public FinalInterval interval;
 	public SliceObserver sliceObserver;
 	public RoiListener roiListener;
+	public RoiListener measureroiListener;
 	public ImagePlus imp;
 	public ImagePlus measureimp;
 	public boolean darktobright = false;
@@ -325,6 +325,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public Color coloroutSelect = Color.CYAN;
 	public Color colorCreate = Color.red;
 	public Color colorDraw = Color.green;
+	public Color colorBigDraw = Color.yellow;
 	public Color colorKDtree = Color.blue;
 	public Color colorOld = Color.MAGENTA;
 	public Color colorPrevious = Color.gray;
@@ -362,7 +363,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public ArrayList<Roi> Rois;
 	public ArrayList<Roi> NearestNeighbourRois;
 	public ArrayList<Roi> BiggerRois;
-
+	public Overlay overlay;
+	public Overlay measureoverlay;
+	public int inix = 1;
+	public int iniy = 1;
 	public static enum ValueChange {
 		SIGMA, THRESHOLD, ROI, MINMAX, ALL, THIRDDIM, FOURTHDIM, maxSearch, iniSearch, missedframes, MINDIVERSITY, DELTA, MINSIZE, MAXSIZE, MAXVAR, DARKTOBRIGHT, FindBlobsVia, SHOWMSER, SHOWDOG, NORMALIZE, MEDIAN, THIRDDIMTrack, FOURTHDIMTrack, SizeX, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, SHOWPROGRESS, RADIUS
 	}
@@ -541,16 +545,18 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	public InteractiveActiveContour_(final ImagePlus imp) {
 		this.imp = imp;
-		standardRectangle = new Rectangle(20, 20, imp.getWidth() - 40, imp.getHeight() - 40);
+		standardRectangle = new Rectangle(inix, iniy, imp.getWidth() - 2 * inix, imp.getHeight() - 2 * iniy);
 		originalimgA = ImageJFunctions.convertFloat(imp.duplicate());
+		
+		
 		height = imp.getHeight();
 		length = imp.getWidth();
 	}
 
 	public InteractiveActiveContour_(final RandomAccessibleInterval<FloatType> originalimgA) {
 		this.originalimgA = originalimgA;
-		standardRectangle = new Rectangle(20, 20, (int) originalimgA.dimension(0) - 40,
-				(int) originalimgA.dimension(1) - 40);
+		standardRectangle = new Rectangle(inix, iniy, (int) originalimgA.dimension(0) - 2 * inix,
+				(int) originalimgA.dimension(1) - 2 * iniy);
 
 	}
 
@@ -558,8 +564,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 			final RandomAccessibleInterval<FloatType> originalimgB) {
 		this.originalimgA = originalimgA;
 		this.originalimgB = originalimgB;
-		standardRectangle = new Rectangle(20, 20, (int) originalimgA.dimension(0) - 40,
-				(int) originalimgA.dimension(1) - 40);
+		standardRectangle = new Rectangle(inix, iniy, (int) originalimgA.dimension(0) - 2 * inix,
+				(int) originalimgA.dimension(1) - 2 * iniy);
 
 	}
 
@@ -663,7 +669,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 		setInitialminSize(minSizeInit);
 		setInitialsearchradius(initialSearchradiusInit);
 		setInitialmaxsearchradius(maxSearchradius);
-
+		overlay = new Overlay();
+		measureoverlay = new Overlay();
 		jpb = new JProgressBar();
 		Rois = new ArrayList<Roi>();
 		peaks = new ArrayList<RefinedPeak<Point>>();
@@ -747,18 +754,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 		SnakeRoisA = new ArrayList<Roi>();
 		SnakeRoisB = new ArrayList<Roi>();
 		impcopy = imp.duplicate();
-		Roi roi = imp.getRoi();
+		
 
-		if (roi == null) {
-			// IJ.log( "A rectangular ROI is required to define the area..." );
-			imp.setRoi(standardRectangle);
-			roi = imp.getRoi();
-		}
-
-		if (roi.getType() != Roi.RECTANGLE) {
-			IJ.log("Only rectangular rois are supported...");
-			return;
-		}
+		
 
 		// show the interactive kit
 		// displaySliders();
@@ -873,16 +871,36 @@ public class InteractiveActiveContour_ implements PlugIn {
 	 */
 
 	public void updatePreview(final ValueChange change) {
+		CurrentView = getCurrentView();
+		otherCurrentView = getotherCurrentView();
+		overlay = imp.getOverlay();
+		boolean roiChanged = false;
+		if (overlay == null) {
 
-		RoiManager roimanager = RoiManager.getInstance();
+			overlay = new Overlay();
+			imp.setOverlay(overlay);
+		}
+		
+		measureoverlay = measureimp.getOverlay();
 
-		if (roimanager == null) {
-			roimanager = new RoiManager();
+		if (measureoverlay == null) {
+
+			measureoverlay = new Overlay();
+			measureimp.setOverlay(measureoverlay);
 		}
 
 		// Re-compute MSER ellipses if neccesary
 
 		if (change == ValueChange.THIRDDIM || change == ValueChange.FOURTHDIM) {
+			
+			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
+			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
+			interval = new FinalInterval(min, max);
+			currentimg = util.FindersUtils.extractImage(CurrentView, interval);
+			othercurrentimg = util.FindersUtils.extractImage(otherCurrentView, interval);
+
+			newimg = util.FindersUtils.copytoByteImage(currentimg);
+			
 			System.out.println("Current Time point: " + thirdDimension);
 			if (imp == null)
 				imp = ImageJFunctions.show(CurrentView);
@@ -900,48 +918,91 @@ public class InteractiveActiveContour_ implements PlugIn {
 			imp.setTitle("Current View in third dimension: " + " " + thirdDimension + " " + "fourth dimension: " + " "
 					+ fourthDimension);
 
+			if (measureimp == null)
+				measureimp = ImageJFunctions.show(otherCurrentView);
+			else {
+				final float[] pixels = (float[]) measureimp.getProcessor().getPixels();
+				final Cursor<FloatType> c = Views.iterable(otherCurrentView).cursor();
+
+				for (int i = 0; i < pixels.length; ++i)
+					pixels[i] = c.next().get();
+
+				measureimp.updateAndDraw();
+
+			}
+
+			measureimp.setTitle("Measure image Current View in third dimension: " + " " + thirdDimension + " " + "fourth dimension: " + " "
+					+ fourthDimension);
+			
+			
 		}
 
-		boolean roiChanged = false;
-		Overlay overlay = imp.getOverlay();
-		if (overlay == null) {
-			overlay = new Overlay();
-			imp.setOverlay(overlay);
-		}
+		
+		
 
-		overlay.clear();
 
 		if (change == ValueChange.SHOWNEW) {
 
-			measureimp = ImageJFunctions.show(otherCurrentView);
+			if (imp == null)
+				imp = ImageJFunctions.show(CurrentView);
+			else {
+				final float[] pixels = (float[]) imp.getProcessor().getPixels();
+				final Cursor<FloatType> c = Views.iterable(CurrentView).cursor();
 
-			if (finalRois != null) {
-				Roi roi = measureimp.getRoi();
-				if (roi == null || roi.getType() != Roi.RECTANGLE) {
-					measureimp.setRoi(new Rectangle(standardRectangle));
-					roi = measureimp.getRoi();
-					roiChanged = true;
+				for (int i = 0; i < pixels.length; ++i)
+					pixels[i] = c.next().get();
+
+				imp.updateAndDraw();
+
+			}
+
+			imp.setTitle("Current View in third dimension: " + " " + thirdDimension + " " + "fourth dimension: " + " "
+					+ fourthDimension);
+
+			if (measureimp == null)
+				measureimp = ImageJFunctions.show(otherCurrentView);
+			else {
+				final float[] pixels = (float[]) measureimp.getProcessor().getPixels();
+				final Cursor<FloatType> c = Views.iterable(otherCurrentView).cursor();
+
+				for (int i = 0; i < pixels.length; ++i)
+					pixels[i] = c.next().get();
+
+				measureimp.updateAndDraw();
+
+			}
+
+			measureimp.setTitle("Measure image Current View in third dimension: " + " " + thirdDimension + " " + "fourth dimension: " + " "
+					+ fourthDimension);
+			
+			
+		
+
+			
+			
+
+				if (measureimp != null) {
+
+					for (int i = 0; i < measureoverlay.size(); ++i) {
+						if (measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+							measureoverlay.remove(i);
+							--i;
+						}
+
+					}
 				}
-				Overlay overlaymeasure = measureimp.getOverlay();
-				if (overlaymeasure == null) {
-					overlaymeasure = new Overlay();
-					measureimp.setOverlay(overlaymeasure);
-				}
-
-				overlaymeasure.clear();
-
 				for (int index = 0; index < finalRois.size(); ++index) {
 
 					final Roi or = util.Boundingboxes.CreateBigRoi((PolygonRoi) finalRois.get(index).rois,
 							othercurrentimg, sizeX, sizeY);
 
-					or.setStrokeColor(Color.red);
-					overlaymeasure.add(or);
-					roimanager.addRoi(or);
+					or.setStrokeColor(colorBigDraw);
+					measureoverlay.add(or);
+				
 
 				}
 
-			}
+			
 
 		}
 
@@ -962,29 +1023,45 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			if (showMSER) {
 
-				overlay.clear();
 				IJ.log(" Computing the Component tree");
 
 				newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 				Rois = util.FindersUtils.getcurrentRois(newtree);
 				ArrayList<double[]> centerRoi = util.FindersUtils.getRoiMean(newtree);
+				if (imp != null) {
 
+					for (int i = 0; i < overlay.size(); ++i) {
+						if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+							overlay.remove(i);
+							--i;
+						}
+
+					}
+				}
+				if (measureimp != null) {
+
+					for (int i = 0; i < measureoverlay.size(); ++i) {
+						if (measureoverlay.get(i).getStrokeColor() == colorDraw|| measureoverlay.get(i).getStrokeColor() == colorBigDraw  ) {
+							measureoverlay.remove(i);
+							--i;
+						}
+
+					}
+				}
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
 					double[] center = new double[] { centerRoi.get(index)[0], centerRoi.get(index)[1] };
 
 					Roi or = Rois.get(index);
 
-					or.setStrokeColor(Color.red);
+					or.setStrokeColor(colorDraw);
 					overlay.add(or);
-					roimanager.addRoi(or);
 				}
 
 			}
 
 			if (showDOG) {
 
-				overlay.clear();
 				// if we got some mouse click but the ROI did not change we
 				// can return
 				if (!roiChanged && change == ValueChange.ROI) {
@@ -1005,6 +1082,27 @@ public class InteractiveActiveContour_ implements PlugIn {
 				peaks = newdog.getSubpixelPeaks();
 
 				Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
+				
+				if (imp != null) {
+
+					for (int i = 0; i < overlay.size(); ++i) {
+						if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw  ) {
+							overlay.remove(i);
+							--i;
+						}
+
+					}
+				}
+				if (measureimp != null) {
+
+					for (int i = 0; i < measureoverlay.size(); ++i) {
+						if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+							measureoverlay.remove(i);
+							--i;
+						}
+
+					}
+				}
 				for (int index = 0; index < peaks.size(); ++index) {
 
 					double[] center = new double[] { peaks.get(index).getDoublePosition(0),
@@ -1012,9 +1110,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 					Roi or = Rois.get(index);
 
-					or.setStrokeColor(Color.red);
+					or.setStrokeColor(colorDraw);
 					overlay.add(or);
-					roimanager.addRoi(or);
 				}
 
 			}
@@ -1036,14 +1133,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 				Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
 				if (displayWatershedimg)
 					ImageJFunctions.show(intimg);
-				overlay.clear();
 				if (!roiChanged && change == ValueChange.ROI) {
 					isComputing = false;
 					return;
 				}
-				roimanager.close();
-
-				roimanager = new RoiManager();
 
 				IJ.log(" Computing the Component tree");
 
@@ -1059,15 +1152,36 @@ public class InteractiveActiveContour_ implements PlugIn {
 				}
 
 				ArrayList<double[]> centerRoi = util.FindersUtils.getRoiMean(newtree);
+				
+				
+				if (imp != null) {
+
+					for (int i = 0; i < overlay.size(); ++i) {
+						if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+							overlay.remove(i);
+							--i;
+						}
+
+					}
+				}
+				if (measureimp != null) {
+
+					for (int i = 0; i < measureoverlay.size(); ++i) {
+						if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+							measureoverlay.remove(i);
+							--i;
+						}
+
+					}
+				}
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
 					double[] center = new double[] { centerRoi.get(index)[0], centerRoi.get(index)[1] };
 
 					Roi or = Rois.get(index);
 
-					or.setStrokeColor(Color.red);
+					or.setStrokeColor(colorDraw);
 					overlay.add(or);
-					roimanager.addRoi(or);
 				}
 
 			}
@@ -1076,6 +1190,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				IJ.log("Doing watershedding on the distance transformed image ");
 
 				RandomAccessibleInterval<BitType> bitimg = new ArrayImgFactory<BitType>().create(newimg, new BitType());
+				
 				GetLocalmaxmin.ThresholdingBit(newimg, bitimg, thresholdHough);
 
 				if (displayBitimg)
@@ -1089,14 +1204,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 				Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
 				if (displayWatershedimg)
 					ImageJFunctions.show(intimg);
-				overlay.clear();
 				if (!roiChanged && change == ValueChange.ROI) {
 					isComputing = false;
 					return;
 				}
-				roimanager.close();
-
-				roimanager = new RoiManager();
 
 				final DogDetection.ExtremaType type;
 
@@ -1119,6 +1230,27 @@ public class InteractiveActiveContour_ implements PlugIn {
 					peaks.addAll(localpeaks);
 
 				}
+				
+				if (imp != null) {
+
+					for (int i = 0; i < overlay.size(); ++i) {
+						if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+							overlay.remove(i);
+							--i;
+						}
+
+					}
+				}
+				if (measureimp != null) {
+
+					for (int i = 0; i < measureoverlay.size(); ++i) {
+						if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+							measureoverlay.remove(i);
+							--i;
+						}
+
+					}
+				}
 
 				for (int index = 0; index < Rois.size(); ++index) {
 					double[] center = new double[] { peaks.get(index).getDoublePosition(0),
@@ -1126,47 +1258,26 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 					Roi or = Rois.get(index);
 
-					or.setStrokeColor(Color.red);
+					or.setStrokeColor(colorDraw);
 					overlay.add(or);
-					roimanager.addRoi(or);
 				}
 
 			}
 
 		}
 
-		if (change == ValueChange.ROI) {
+	
 
-			Roi roi = imp.getRoi();
-			if (roi == null || roi.getType() != Roi.RECTANGLE) {
-				imp.setRoi(new Rectangle(standardRectangle));
-				roi = imp.getRoi();
-				roiChanged = true;
-			}
-
-			final Rectangle rect = roi.getBounds();
-
-			standardRectangle = rect;
+		if (change == ValueChange.SHOWSEGMSER) {
 			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
 			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
 			interval = new FinalInterval(min, max);
+
 			currentimg = util.FindersUtils.extractImage(CurrentView, interval);
 			othercurrentimg = util.FindersUtils.extractImage(otherCurrentView, interval);
 
 			newimg = util.FindersUtils.copytoByteImage(currentimg);
-			final Float houghval = AutomaticThresholding(currentimg);
 
-			// Get local Minima in scale space to get Max rho-theta points
-
-			threshold = (float) getThreshold();
-
-			thresholdMax = (float) getThresholdMax();
-
-			thresholdMin = (float) getThresholdMin();
-
-		}
-
-		if (change == ValueChange.SHOWSEGMSER) {
 			IJ.log("Doing watershedding on the distance transformed image ");
 
 			RandomAccessibleInterval<BitType> bitimg = new ArrayImgFactory<BitType>().create(newimg, new BitType());
@@ -1183,7 +1294,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 			Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
 			if (displayWatershedimg)
 				ImageJFunctions.show(intimg);
-			overlay.clear();
 			if (Rois != null)
 				Rois.clear();
 
@@ -1191,9 +1301,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 				isComputing = false;
 				return;
 			}
-			roimanager.close();
-
-			roimanager = new RoiManager();
 
 			IJ.log(" Computing the Component tree");
 
@@ -1212,20 +1319,51 @@ public class InteractiveActiveContour_ implements PlugIn {
 					+ " " + fourthDimension);
 			IJ.log("Delta " + " " + delta + " " + "minSize " + " " + minSize + " " + "maxSize " + " " + maxSize + " "
 					+ " maxVar " + " " + maxVar + " " + "minDIversity " + " " + minDiversity);
+			
+			if (imp != null) {
+
+				for (int i = 0; i < overlay.size(); ++i) {
+					if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+						overlay.remove(i);
+						--i;
+					}
+
+				}
+			}
+			if (measureimp != null) {
+
+				for (int i = 0; i < measureoverlay.size(); ++i) {
+					if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+						measureoverlay.remove(i);
+						--i;
+					}
+
+				}
+			}
+			
 			for (int index = 0; index < Rois.size(); ++index) {
 
 				Roi or = Rois.get(index);
 
-				or.setStrokeColor(Color.red);
+				or.setStrokeColor(colorDraw);
 				overlay.add(or);
-				roimanager.addRoi(or);
 			}
 
 		}
 		if (change == ValueChange.SHOWSEGDOG) {
+			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
+			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
+			interval = new FinalInterval(min, max);
+
+			currentimg = util.FindersUtils.extractImage(CurrentView, interval);
+			othercurrentimg = util.FindersUtils.extractImage(otherCurrentView, interval);
+
+			newimg = util.FindersUtils.copytoByteImage(currentimg);
+
 			IJ.log("Doing watershedding on the distance transformed image ");
 
 			RandomAccessibleInterval<BitType> bitimg = new ArrayImgFactory<BitType>().create(newimg, new BitType());
+			
 			GetLocalmaxmin.ThresholdingBit(newimg, bitimg, thresholdHough);
 
 			if (displayBitimg)
@@ -1239,16 +1377,13 @@ public class InteractiveActiveContour_ implements PlugIn {
 			Maxlabel = WaterafterDisttransform.GetMaxlabelsseeded(intimg);
 			if (displayWatershedimg)
 				ImageJFunctions.show(intimg);
-			overlay.clear();
 			if (Rois != null)
 				Rois.clear();
 			if (!roiChanged && change == ValueChange.ROI) {
 				isComputing = false;
 				return;
 			}
-			roimanager.close();
 
-			roimanager = new RoiManager();
 
 			final DogDetection.ExtremaType type;
 
@@ -1274,18 +1409,46 @@ public class InteractiveActiveContour_ implements PlugIn {
 					+ " " + fourthDimension);
 			IJ.log("Sigma " + " " + sigma + " " + "Sigma2 " + " " + sigma2 + " " + "Threshold " + " " + threshold);
 
+			if (imp != null) {
+
+				for (int i = 0; i < overlay.size(); ++i) {
+					if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+						overlay.remove(i);
+						--i;
+					}
+
+				}
+			}
+			if (measureimp != null) {
+
+				for (int i = 0; i < measureoverlay.size(); ++i) {
+					if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+						measureoverlay.remove(i);
+						--i;
+					}
+
+				}
+			}
+			
 			for (int index = 0; index < Rois.size(); ++index) {
 
 				Roi or = Rois.get(index);
 
-				or.setStrokeColor(Color.red);
+				or.setStrokeColor(colorDraw);
 				overlay.add(or);
-				roimanager.addRoi(or);
 			}
 
 		}
 		if (change == ValueChange.SHOWMSER) {
-			overlay.clear();
+			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
+		long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
+		interval = new FinalInterval(min, max);
+
+		currentimg = util.FindersUtils.extractImage(CurrentView, interval);
+		othercurrentimg = util.FindersUtils.extractImage(otherCurrentView, interval);
+
+		newimg = util.FindersUtils.copytoByteImage(currentimg);
+
 			// check if Roi changed
 
 			// if we got some mouse click but the ROI did not change we can
@@ -1294,9 +1457,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 				isComputing = false;
 				return;
 			}
-			roimanager.close();
-
-			roimanager = new RoiManager();
 
 			IJ.log(" Computing the Component tree");
 
@@ -1307,22 +1467,53 @@ public class InteractiveActiveContour_ implements PlugIn {
 					+ " " + fourthDimension);
 			IJ.log("Delta " + " " + delta + " " + "minSize " + " " + minSize + " " + "maxSize " + " " + maxSize + " "
 					+ " maxVar " + " " + maxVar + " " + "minDIversity " + " " + minDiversity);
+			
+			
+			
+			if (imp != null) {
+
+				for (int i = 0; i < overlay.size(); ++i) {
+					if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+						overlay.remove(i);
+						--i;
+					}
+
+				}
+			}
+			if (measureimp != null) {
+
+				for (int i = 0; i < measureoverlay.size(); ++i) {
+					if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+						measureoverlay.remove(i);
+						--i;
+					}
+
+				}
+			}
 			for (int index = 0; index < Rois.size(); ++index) {
 
 				Roi or = Rois.get(index);
 
-				or.setStrokeColor(Color.red);
+				or.setStrokeColor(colorDraw);
 				overlay.add(or);
-				roimanager.addRoi(or);
 			}
 		}
 
 		if (change == ValueChange.Segmentation) {
+			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
+			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
+			interval = new FinalInterval(min, max);
+
+			currentimg = util.FindersUtils.extractImage(CurrentView, interval);
+			othercurrentimg = util.FindersUtils.extractImage(otherCurrentView, interval);
+
+			newimg = util.FindersUtils.copytoByteImage(currentimg);
 
 			IJ.log("Doing watershedding on the distance transformed image ");
 
 			RandomAccessibleInterval<BitType> bitimg = new ArrayImgFactory<BitType>().create(newimg, new BitType());
-			GetLocalmaxmin.ThresholdingBit(newimg, bitimg, thresholdHough);
+			
+			GetLocalmaxmin.ThresholdingBit(newimg, bitimg,  thresholdHough);
 
 			if (displayBitimg)
 				ImageJFunctions.show(bitimg);
@@ -1339,19 +1530,24 @@ public class InteractiveActiveContour_ implements PlugIn {
 		}
 
 		if (change == ValueChange.SHOWDOG) {
+			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
+			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
+			interval = new FinalInterval(min, max);
 
+			currentimg = util.FindersUtils.extractImage(CurrentView, interval);
+			othercurrentimg = util.FindersUtils.extractImage(otherCurrentView, interval);
+
+			newimg = util.FindersUtils.copytoByteImage(currentimg);
+
+			
 			// check if Roi changed
 
-			overlay.clear();
 			// if we got some mouse click but the ROI did not change we can
 			// return
 			if (!roiChanged && change == ValueChange.ROI) {
 				isComputing = false;
 				return;
 			}
-			roimanager.close();
-
-			roimanager = new RoiManager();
 
 			final DogDetection.ExtremaType type;
 
@@ -1369,14 +1565,33 @@ public class InteractiveActiveContour_ implements PlugIn {
 			peaks = newdog.getSubpixelPeaks();
 
 			Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
+			if (imp != null) {
 
+				for (int i = 0; i < overlay.size(); ++i) {
+					if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+						overlay.remove(i);
+						--i;
+					}
+
+				}
+			}
+			if (measureimp != null) {
+
+				for (int i = 0; i < measureoverlay.size(); ++i) {
+					if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+						measureoverlay.remove(i);
+						--i;
+					}
+
+				}
+			}
+			
 			for (int index = 0; index < Rois.size(); ++index) {
 
 				Roi or = Rois.get(index);
 
-				or.setStrokeColor(Color.red);
+				or.setStrokeColor(colorDraw);
 				overlay.add(or);
-				roimanager.addRoi(or);
 			}
 
 		}
@@ -1386,8 +1601,17 @@ public class InteractiveActiveContour_ implements PlugIn {
 			isComputing = false;
 			return;
 		}
-
+		if (imp != null)
+			imp.updateAndDraw();
+		roiListener = new RoiListener();
+		imp.getCanvas().addMouseListener(roiListener);
+		if (measureimp != null)
+			measureimp.updateAndDraw();
+		measureroiListener = new RoiListener();
+		measureimp.getCanvas().addMouseListener(measureroiListener);
+		
 		isComputing = false;
+		
 	}
 
 	public void goAll() {
@@ -2846,14 +3070,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 					return;
 				}
 
-				Roi roi = imp.getRoi();
-				if (roi == null) {
-					// IJ.log( "A rectangular ROI is required to define the
-					// area..."
-					// );
-					imp.setRoi(standardRectangle);
-					roi = imp.getRoi();
-				}
+			
 
 				// copy the ImagePlus into an ArrayImage<FloatType> for faster
 				// access
@@ -2878,7 +3095,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 				roiListener = new RoiListener();
 				imp.getCanvas().addMouseListener(roiListener);
 
-				final Rectangle rect = roi.getBounds();
 
 				for (final RefinedPeak<Point> peak : peaks) {
 
@@ -2915,14 +3131,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 					return;
 				}
 
-				Roi roi = imp.getRoi();
-				if (roi == null) {
-					// IJ.log( "A rectangular ROI is required to define the
-					// area..."
-					// );
-					imp.setRoi(standardRectangle);
-					roi = imp.getRoi();
-				}
+			
+				
 
 				// copy the ImagePlus into an ArrayImage<FloatType> for faster
 				// access
@@ -2946,7 +3156,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 				roiListener = new RoiListener();
 				imp.getCanvas().addMouseListener(roiListener);
 
-				final Rectangle rect = roi.getBounds();
 
 				for (final RefinedPeak<Point> peak : peaks) {
 
@@ -3555,14 +3764,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				thirdDimension = thirdDimensionSize;
 			}
 
-			Roi roi = imp.getRoi();
-			if (roi == null) {
-				// IJ.log( "A rectangular ROI is required to define the
-				// area..."
-				// );
-				imp.setRoi(standardRectangle);
-				roi = imp.getRoi();
-			}
+			
 
 			CurrentView = getCurrentView();
 			otherCurrentView = getotherCurrentView();

@@ -564,7 +564,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 			// each iteration
 			dist = snake.process();
 
-			if (Math.abs(dist0 - dist) < 0.05){
+			if (Math.abs(dist0 - dist) < 0.01){
 				
 				term++;
 			}
