@@ -31,7 +31,7 @@ public class FindBlobsListener implements ActionListener {
 				parent.updatePreview(ValueChange.SHOWMSER);
 
 				BlobfinderInteractiveMSER newblobMser = new BlobfinderInteractiveMSER(parent.currentimg,parent.othercurrentimg,
-						parent.newtree, parent.sizeX, parent.sizeY, parent.thirdDimension, parent.fourthDimension);
+						parent.newtree, parent.RadiusMeasure, parent.thirdDimension, parent.fourthDimension);
 
 				parent.ProbBlobs = FindblobsVia.BlobfindingMethod(newblobMser);
 

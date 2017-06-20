@@ -187,10 +187,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public float imageSigma = 0.5f;
 	public float sigmaMin = 0.5f;
 	public float sigmaMax = 100f;
-	public float sizeXMin = 0;
+	public float RadiusMeasureMin = 0;
 	public float sizeYMin = 0;
 
-	public float sizeXMax = 100f;
+	public float RadiusMeasureMax = 100f;
 	public float sizeYMax = 100f;
 	public int sigmaInit = 30;
 
@@ -221,11 +221,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public float thresholdMax = 1f;
 	public int thresholdInit = 1;
 	public float thresholdHoughMin = 0f;
-	public float thresholdHoughMax = 1f;
+	public float thresholdHoughMax = 255f;
 	public int thresholdHoughInit = 1;
 
-	public float sizeX = 0;
-	public float sizeY = 0;
+	public float RadiusMeasure = 0;
+	
 	public int radius = 1;
 	public float maxVar = 1;
 	public int Progressmin = 0;
@@ -275,7 +275,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public ArrayList<SnakeObject> currentsnakes;
 	public int length = 0;
 	public int height = 0;
-	public int sizeXinit = 0;
+	public int RadiusMeasureinit = 0;
 	public int sizeYinit = 0;
 	public RandomAccessibleInterval<FloatType> CurrentView;
 	public RandomAccessibleInterval<FloatType> otherCurrentView;
@@ -368,7 +368,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public int inix = 1;
 	public int iniy = 1;
 	public static enum ValueChange {
-		SIGMA, THRESHOLD, ROI, MINMAX, ALL, THIRDDIM, FOURTHDIM, maxSearch, iniSearch, missedframes, MINDIVERSITY, DELTA, MINSIZE, MAXSIZE, MAXVAR, DARKTOBRIGHT, FindBlobsVia, SHOWMSER, SHOWDOG, NORMALIZE, MEDIAN, THIRDDIMTrack, FOURTHDIMTrack, SizeX, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, SHOWPROGRESS, RADIUS
+		SIGMA, THRESHOLD, ROI, MINMAX, ALL, THIRDDIM, FOURTHDIM, maxSearch, iniSearch, missedframes, MINDIVERSITY, DELTA, MINSIZE, MAXSIZE, MAXVAR, DARKTOBRIGHT, FindBlobsVia, SHOWMSER, SHOWDOG, NORMALIZE, MEDIAN, THIRDDIMTrack, FOURTHDIMTrack, RadiusMeasure, SizeY, SHOWNEW, Beta, Alphapart, Alpha, Segmentation, SHOWSEGMSER, SHOWSEGDOG, DISPLAYBITIMG, DISPLAYWATERSHEDIMG, SHOWPROGRESS, RADIUS
 	}
 
 	boolean isFinished = false;
@@ -734,13 +734,13 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		thresholdHoughMin = (float) (0);
 
-		setthresholdMin(thresholdMin);
-		setthresholdMax(thresholdMax);
-		setThreshold(threshold / 40);
+		setthresholdMin(0);
+		setthresholdMax(255);
+		setThreshold(100);
 
-		setthresholdHoughMin(thresholdHoughMin);
-		setthresholdHoughMax(thresholdHoughMax);
-		setThresholdHough(thresholdHough / 40);
+		setthresholdHoughMin(0);
+		setthresholdHoughMax(255);
+		setThresholdHough(100);
 
 		measureimp = ImageJFunctions.show(otherCurrentView);
 		measureimp.setTitle("CurrentView of Measurment image");
@@ -994,7 +994,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				for (int index = 0; index < finalRois.size(); ++index) {
 
 					final Roi or = util.Boundingboxes.CreateBigRoi((PolygonRoi) finalRois.get(index).rois,
-							othercurrentimg, sizeX, sizeY);
+							othercurrentimg, RadiusMeasure);
 
 					or.setStrokeColor(colorBigDraw);
 					measureoverlay.add(or);
@@ -1008,8 +1008,37 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		if (change == ValueChange.THIRDDIMTrack || change == ValueChange.FOURTHDIMTrack) {
 
-			if (Rois != null)
-				Rois.clear();
+			if (imp == null)
+				imp = ImageJFunctions.show(CurrentView);
+			else {
+				final float[] pixels = (float[]) imp.getProcessor().getPixels();
+				final Cursor<FloatType> c = Views.iterable(CurrentView).cursor();
+
+				for (int i = 0; i < pixels.length; ++i)
+					pixels[i] = c.next().get();
+
+				imp.updateAndDraw();
+
+			}
+
+			imp.setTitle("Current View in third dimension: " + " " + thirdDimension + " " + "fourth dimension: " + " "
+					+ fourthDimension);
+
+			if (measureimp == null)
+				measureimp = ImageJFunctions.show(otherCurrentView);
+			else {
+				final float[] pixels = (float[]) measureimp.getProcessor().getPixels();
+				final Cursor<FloatType> c = Views.iterable(otherCurrentView).cursor();
+
+				for (int i = 0; i < pixels.length; ++i)
+					pixels[i] = c.next().get();
+
+				measureimp.updateAndDraw();
+
+			}
+
+			measureimp.setTitle("Measure image Current View in third dimension: " + " " + thirdDimension + " " + "fourth dimension: " + " "
+					+ fourthDimension);
 			// imp = ImageJFunctions.wrapFloat(CurrentView, "current");
 
 			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
@@ -1991,7 +2020,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 						Roi roi = list.get(index).roi;
 
-						final Roi Bigroi = util.Boundingboxes.CreateBigRoi(roi, othercurrentimg, sizeX, sizeY);
+						final Roi Bigroi = util.Boundingboxes.CreateBigRoi(roi, othercurrentimg, RadiusMeasure);
 
 						if (Bigroi.contains(x, y)) {
 
@@ -2415,21 +2444,14 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		// Selection tool panel
 
-		final Scrollbar sizeXbar = new Scrollbar(Scrollbar.HORIZONTAL, sizeXinit, 10, 0, 10 + scrollbarSize);
-		final Scrollbar sizeYbar = new Scrollbar(Scrollbar.HORIZONTAL, sizeYinit, 10, 0, 10 + scrollbarSize);
-		final Label AdjustX = new Label("Adjust Size X");
-		final Label AdjustY = new Label("Adjust Size Y");
-		sizeX = computeValueFromScrollbarPosition(sizeXinit, sizeXMin, sizeXMax, scrollbarSize);
-		sizeY = computeValueFromScrollbarPosition(sizeYinit, sizeYMin, sizeYMax, scrollbarSize);
-		AdjustY.setForeground(new Color(255, 255, 255));
-		AdjustY.setBackground(new Color(1, 0, 1));
+		final Scrollbar RadiusMeasurebar = new Scrollbar(Scrollbar.HORIZONTAL, RadiusMeasureinit, 10, 0, 10 + scrollbarSize);
+		final Label Adjustradi = new Label("Adjust Radius around Rois for measurment");
+		RadiusMeasure = computeValueFromScrollbarPosition(RadiusMeasureinit, RadiusMeasureMin, RadiusMeasureMax, scrollbarSize);
+		
+		Adjustradi.setForeground(new Color(255, 255, 255));
+		Adjustradi.setBackground(new Color(1, 0, 1));
 
-		AdjustX.setForeground(new Color(255, 255, 255));
-		AdjustX.setBackground(new Color(1, 0, 1));
-		final Button ComputeRoi = new Button("Compute new ROI");
-
-		final Label sizeTextX = new Label("Size X = " + sizeX, Label.CENTER);
-		final Label sizeTextY = new Label("Size Y = " + sizeY, Label.CENTER);
+		final Label sizeTextX = new Label("Increase Radius for Intensity Measurement = " + RadiusMeasure, Label.CENTER);
 
 		Progressmax = Rois.size();
 
@@ -2448,33 +2470,21 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
-		panelThird.add(AdjustX, c);
+		panelThird.add(Adjustradi, c);
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
-		panelThird.add(sizeXbar, c);
+		panelThird.add(RadiusMeasurebar, c);
 
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
 		panelThird.add(sizeTextX, c);
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		panelThird.add(AdjustY, c);
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		panelThird.add(sizeYbar, c);
+	
 
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		panelThird.add(sizeTextY, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 175, 0, 175);
-		panelThird.add(ComputeRoi, c);
+	
 
 		/* Configuration */
-		sizeXbar.addAdjustmentListener(new SizeXListener(sizeTextX, sizeXMin, sizeXMax));
-		sizeYbar.addAdjustmentListener(new SizeYListener(sizeTextY, sizeYMin, sizeYMax));
-		ComputeRoi.addActionListener(new ComputenewRoiListener());
+		RadiusMeasurebar.addAdjustmentListener(new RadiusMeasureListener(sizeTextX, RadiusMeasureMin, RadiusMeasureMax));
+		
 
 		/* Location */
 		panelFourth.setLayout(layout);
@@ -2691,11 +2701,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 		}
 	}
 
-	protected class SizeXListener implements AdjustmentListener {
+	protected class RadiusMeasureListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
 
-		public SizeXListener(final Label label, final float min, final float max) {
+		public RadiusMeasureListener(final Label label, final float min, final float max) {
 			this.label = label;
 			this.min = min;
 			this.max = max;
@@ -2703,46 +2713,23 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			sizeX = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
-			label.setText("SizeX = " + sizeX);
+			RadiusMeasure = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
+			label.setText("RadiusMeasure = " + RadiusMeasure);
 
 			if (!isComputing) {
-				updatePreview(ValueChange.SizeX);
+				showNew = true;
+				updatePreview(ValueChange.SHOWNEW);
 			} else if (!event.getValueIsAdjusting()) {
 				while (isComputing) {
 					SimpleMultiThreading.threadWait(10);
 				}
-				updatePreview(ValueChange.SizeX);
+				showNew = true;
+				updatePreview(ValueChange.SHOWNEW);
 			}
 		}
 	}
 
-	protected class SizeYListener implements AdjustmentListener {
-		final Label label;
-		final float min, max;
-
-		public SizeYListener(final Label label, final float min, final float max) {
-			this.label = label;
-			this.min = min;
-			this.max = max;
-		}
-
-		@Override
-		public void adjustmentValueChanged(final AdjustmentEvent event) {
-			sizeY = computeValueFromScrollbarPosition(event.getValue(), min, max, scrollbarSize);
-			label.setText("SizeY = " + sizeY);
-
-			if (!isComputing) {
-				updatePreview(ValueChange.SizeY);
-			} else if (!event.getValueIsAdjusting()) {
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.SizeY);
-			}
-		}
-	}
-
+	
 	protected class NNListener implements ItemListener {
 
 		@Override

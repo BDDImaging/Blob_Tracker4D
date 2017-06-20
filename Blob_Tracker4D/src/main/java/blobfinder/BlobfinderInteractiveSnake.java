@@ -115,8 +115,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	private final int ndims;
 	private final int fourthDimension;
 	private final int thirdDimension;
-	private final double sizeX;
-	private final double sizeY;
+	private final double size;
 	private int Roiindex;
 	double percent = 0;
 
@@ -171,8 +170,8 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	private final ConcurrentHashMap<String, Double> features = new ConcurrentHashMap<String, Double>();
 
 	public BlobfinderInteractiveSnake(final RandomAccessibleInterval<FloatType> source,
-			final RandomAccessibleInterval<FloatType> target, ArrayList<Roi> rois, final double sizeX,
-			final double sizeY, final String usefolder, final String addToName, final int thirdDimension,
+			final RandomAccessibleInterval<FloatType> target, ArrayList<Roi> rois, final double size,
+			 final String usefolder, final String addToName, final int thirdDimension,
 			final int fourthDimension, final boolean TrackinT, final JProgressBar jpb, final int duration) {
 
 		this.source = source;
@@ -181,8 +180,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		this.fourthDimension = fourthDimension;
 		this.TrackinT = TrackinT;
 		this.rois = rois;
-		this.sizeX = sizeX;
-		this.sizeY = sizeY;
+		this.size = size;
 		this.usefolder = usefolder;
 		this.addToName = addToName;
 		this.jpb = jpb;
@@ -700,8 +698,8 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		int width = (int) roi.getBounds().getWidth();
 		int height = (int) roi.getBounds().getHeight();
 
-		final OvalRoi Bigroi = new OvalRoi(Util.round(center[0] - (width + sizeX) / 2),
-				Util.round(center[1] - (height + sizeY) / 2), Util.round(width + sizeX), Util.round(height + sizeY));
+		final OvalRoi Bigroi = new OvalRoi(Util.round(center[0] - (width + size) / 2),
+				Util.round(center[1] - (height + size) / 2), Util.round(width + size), Util.round(height + size));
 
 		Cursor<FloatType> secondcurrentcursor = Views.iterable(source).localizingCursor();
 

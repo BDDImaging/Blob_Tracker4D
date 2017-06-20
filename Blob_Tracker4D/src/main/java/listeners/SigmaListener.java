@@ -32,6 +32,7 @@ import snakes.InteractiveActiveContour_.ValueChange;
 			this.sigmaScrollbar1 = sigmaScrollbar1;
 			this.sigmaScrollbar2 = sigmaScrollbar2;
 			this.sigmaText2 = sigmaText2;
+			sigmaScrollbar1.addMouseListener( new StandardMouseListener( parent, ValueChange.SHOWDOG ) );
 		}
 
 		@Override
@@ -49,13 +50,7 @@ import snakes.InteractiveActiveContour_.ValueChange;
 
 			label.setText("Sigma 1 = " + parent.sigma);
 
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (parent.isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				parent.updatePreview(ValueChange.SIGMA);
-			}
+		
 		}
 	
 }

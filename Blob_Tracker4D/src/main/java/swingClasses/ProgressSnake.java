@@ -9,6 +9,7 @@ import javax.swing.SwingWorker;
 import blobfinder.BlobfinderInteractiveSnake;
 import ij.IJ;
 import ij.gui.Roi;
+import ij.process.ColorProcessor;
 import snakes.InteractiveActiveContour_;
 import snakes.SnakeObject;
 import snakes.InteractiveActiveContour_.ValueChange;
@@ -62,11 +63,10 @@ public class ProgressSnake extends SwingWorker<Void, Void>  {
 
 			BlobfinderInteractiveSnake snake;
 			if (parent.NearestNeighbourRois.size() > 0)
-				snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois, parent.sizeX,
-						parent.sizeY, parent.usefolder, parent.addTrackToName, z, 0, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
+				snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois, parent.RadiusMeasure, parent.usefolder, parent.addTrackToName, z, 0, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
 			else
 
-				snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.sizeX, parent.sizeY, parent.usefolder,
+				snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.RadiusMeasure, parent.usefolder,
 						parent.addTrackToName, z, 0, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
 
 			if (parent.Auto && z > next)
@@ -81,6 +81,18 @@ public class ProgressSnake extends SwingWorker<Void, Void>  {
 
 			parent.snakeoverlay = snake.getABsnake();
 			
+			parent.snakestack.addSlice(parent.imp.getImageStack().getProcessor(z).convertToRGB());
+			parent.measuresnakestack.addSlice(parent.measureimp.getImageStack().getProcessor(z).convertToRGB());
+
+		 parent.cp = (ColorProcessor) (parent.snakestack.getProcessor(z).duplicate());
+			parent.measurecp = (ColorProcessor) (parent.measuresnakestack.getProcessor(z).duplicate());
+			parent.overlay.clear();
+			
+			for (int i = 0; i < parent.snakeoverlay.size(); ++i) {
+				Roi normalroi = parent.snakeoverlay.get(i).createRoi();
+				parent.overlay.add(normalroi);
+			}
+			
 				for (int i = 0; i < parent.snakeoverlay.size(); ++i) {
 
 					parent.snakeoverlay.get(i).DrawSnake(parent.cp, snake.colorDraw, 1);
@@ -89,13 +101,18 @@ public class ProgressSnake extends SwingWorker<Void, Void>  {
 
 					AllRois.add(normalroi);
 					
-					final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, parent.currentimg, parent.sizeX, parent.sizeY);
+					final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, parent.currentimg, parent.RadiusMeasure);
 					
 					AllmeasureRois.add(Bigroi);
+					
+					parent.measurecp.setColor(parent.colorBigDraw);
+					parent.measurecp.setLineWidth(1);
+					parent.measurecp.draw(Bigroi);
 				}
 
 				
-
+				parent.snakestack.setPixels(parent.cp.getPixels(), z);
+				parent.measuresnakestack.setPixels(parent.measurecp.getPixels(), z);
 			
 
 			if (parent.All3DSnakes != null) {

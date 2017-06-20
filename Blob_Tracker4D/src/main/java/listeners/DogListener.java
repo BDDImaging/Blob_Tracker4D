@@ -89,13 +89,7 @@ public class DogListener implements ItemListener {
 			c.insets = new Insets(10, 10, 0, 0);
 			parent.panelSecond.add(sigmaText1, c);
 
-			++c.gridy;
-			c.insets = new Insets(10, 10, 0, 0);
-			parent.panelSecond.add(sigma2S, c);
-
-			++c.gridy;
-			c.insets = new Insets(10, 10, 0, 0);
-			parent.panelSecond.add(sigmaText2, c);
+			
 
 			++c.gridy;
 			c.insets = new Insets(10, 0, 0, 0);
@@ -105,17 +99,7 @@ public class DogListener implements ItemListener {
 			c.insets = new Insets(10, 10, 0, 0);
 			parent.panelSecond.add(thresholdText, c);
 
-			++c.gridy;
-			c.insets = new Insets(0, 170, 0, 75);
-			parent.panelSecond.add(min, c);
-
-			++c.gridy;
-			c.insets = new Insets(0, 170, 0, 75);
-			parent.panelSecond.add(max, c);
-
-			++c.gridy;
-			c.insets = new Insets(0, 180, 0, 180);
-			parent.panelSecond.add(DisplayBlobs, c);
+		
 
 			/* Configuration */
 			sigma1.addAdjustmentListener(
@@ -131,11 +115,9 @@ public class DogListener implements ItemListener {
 			parent.Cardframe.pack();
 		}
 
-		if (parent.findBlobsViaDOG != oldState) {
-			while (parent.isComputing)
-				SimpleMultiThreading.threadWait(10);
+		
 
-			parent.updatePreview(ValueChange.FindBlobsVia);
-		}
+			parent.updatePreview(ValueChange.SHOWDOG);
+		
 	}
 }

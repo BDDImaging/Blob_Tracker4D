@@ -56,7 +56,7 @@ public class Boundingboxes {
 
 	}
 	
-	public static Roi CreateBigRoi (final Roi currentroi, final RandomAccessibleInterval<FloatType> currentimg, final double sizeX, final double sizeY){
+	public static Roi CreateBigRoi (final Roi currentroi, final RandomAccessibleInterval<FloatType> currentimg, final double radius){
 		
 		
 		
@@ -66,10 +66,10 @@ public class Boundingboxes {
 		double[] center = getCenter(currentroi, currentimg);
 		
 	
-			Roi Bigroi = new OvalRoi(Util.round(center[0] -(width + sizeX)/2), Util.round(center[1] - (height + sizeY)/2 ), Util.round(width + sizeX),
-					Util.round(height + sizeY));
+			Roi Bigroi = new OvalRoi(Util.round(center[0] -(width + radius)/2), Util.round(center[1] - (height + radius)/2 ), Util.round(width + radius),
+					Util.round(height + radius));
 			
-		      if(sizeX == 0 && sizeY == 0)
+		      if(radius == 0 )
 		    	  Bigroi = currentroi;
 			
 		        

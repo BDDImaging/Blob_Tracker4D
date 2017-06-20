@@ -170,9 +170,7 @@ public class SegDogListener implements ItemListener {
 			c.insets = new Insets(0, 170, 0, 75);
 			parent.panelSecond.add(max, c);
 
-			++c.gridy;
-			c.insets = new Insets(0, 180, 0, 180);
-			parent.panelSecond.add(DisplayBlobs, c);
+		
 
 			/* Configuration */
 			sigma1.addAdjustmentListener(
@@ -189,12 +187,10 @@ public class SegDogListener implements ItemListener {
 			parent.Cardframe.pack();
 		}
 
-		if (parent.findBlobsViaSEGDOG != oldState) {
-			while (parent.isComputing)
-				SimpleMultiThreading.threadWait(10);
+		
 
-			parent.updatePreview(ValueChange.FindBlobsVia);
-		}
+			parent.updatePreview(ValueChange.SHOWSEGDOG);
+		
 	}
 	
 }

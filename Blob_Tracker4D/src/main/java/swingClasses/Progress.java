@@ -41,12 +41,12 @@ public class Progress extends SwingWorker<Void, Void> {
 
 				BlobfinderInteractiveSnake snake;
 				if (parent.NearestNeighbourRois.size() > 0)
-					snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois, parent.sizeX,
-							parent.sizeY, parent.usefolder, parent.addTrackToName, parent.thirdDimensionslider, parent.fourthDimensionslider, parent.TrackinT, parent.jpb,
+					snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois, parent.RadiusMeasure,
+							 parent.usefolder, parent.addTrackToName, parent.thirdDimensionslider, parent.fourthDimensionslider, parent.TrackinT, parent.jpb,
 							parent.thirdDimensionSize);
 				else
 
-					snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.sizeX, parent.sizeY, parent.usefolder,
+					snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.RadiusMeasure, parent.usefolder,
 							parent.addTrackToName, parent.thirdDimensionslider, parent.fourthDimensionslider, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
 				parent.jpb.setIndeterminate(false);
 				snake.process();
@@ -87,7 +87,7 @@ public class Progress extends SwingWorker<Void, Void> {
 
 						AllRois.add(normalroi);
 						
-						final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, parent.currentimg, parent.sizeX, parent.sizeY);
+						final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, parent.currentimg, parent.RadiusMeasure);
 						
 						AllmeasureRois.add(Bigroi);
 						parent.measurecp.setColor(parent.colorBigDraw);

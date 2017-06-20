@@ -54,20 +54,19 @@ public class BlobfinderInteractiveMSER implements Blobfinder {
 	private final int thirdDimension;
 	private int Roiindex;
 	private Roi ellipseroi;
-	private final double sizeX;
-	private final double sizeY;
+	private final double size;
 	
 
 	public BlobfinderInteractiveMSER(final RandomAccessibleInterval<FloatType> source, final RandomAccessibleInterval<FloatType> target,
-			MserTree<UnsignedByteType> newtree, final double sizeX, final double sizeY, final int thirdDimension,  final int fourthDimension){
+			MserTree<UnsignedByteType> newtree, final double size, final int thirdDimension,  final int fourthDimension){
 		
 		this.source = source;
 		this.target = target;
 		this.newtree = newtree;
 	    this.thirdDimension = thirdDimension;
 		this.fourthDimension = fourthDimension;
-		this.sizeX = sizeX;
-		this.sizeY = sizeY;
+		this.size = size;
+		
 		ndims = source.numDimensions();
 	}
 	
@@ -251,8 +250,8 @@ public class BlobfinderInteractiveMSER implements Blobfinder {
 		int width = (int)roi.getBounds().getWidth();
 		int height = (int)roi.getBounds().getHeight();
 		
-		final OvalRoi Bigroi = new OvalRoi(Util.round(center[0] -(width + sizeX)/2), Util.round(center[1] - (height + sizeY)/2 ), Util.round(width + sizeX),
-				Util.round(height + sizeY));
+		final OvalRoi Bigroi = new OvalRoi(Util.round(center[0] -(width + size)/2), Util.round(center[1] - (height + size)/2 ), Util.round(width + size),
+				Util.round(height + size));
 		
        Cursor<FloatType> secondcurrentcursor = Views.iterable(source).localizingCursor();
 

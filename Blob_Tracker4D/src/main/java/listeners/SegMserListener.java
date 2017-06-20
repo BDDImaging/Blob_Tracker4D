@@ -58,7 +58,7 @@ public class SegMserListener implements ItemListener {
 
 			final Checkbox displayBit = new Checkbox("Display Bitimage ", parent.displayBitimg);
 			final Checkbox displayWatershed = new Checkbox("Display Watershedimage ", parent.displayWatershedimg);
-			final Label thresholdText = new Label("thresholdValue = ", Label.CENTER);
+			final Label thresholdText = new Label("thresholdValue = " + parent.threshold, Label.CENTER);
 
 			final Button Dowatershed = new Button("Do watershedding");
 			final Label Segparam = new Label("Determine Threshold level for Segmentation");
@@ -174,9 +174,7 @@ public class SegMserListener implements ItemListener {
 			c.insets = new Insets(10, 175, 0, 175);
 			parent.panelSecond.add(min, c);
 
-			++c.gridy;
-			c.insets = new Insets(10, 175, 0, 175);
-			parent.panelSecond.add(ComputeTree, c);
+		
 
 			deltaS.addAdjustmentListener(new DeltaListener(parent, deltaText, parent.deltaMin, parent.deltaMax, parent.scrollbarSize, deltaS));
 
@@ -199,12 +197,9 @@ public class SegMserListener implements ItemListener {
 			parent.Cardframe.pack();
 		}
 
-		if (parent.findBlobsViaSEGMSER != oldState) {
-			while (parent.isComputing)
-				SimpleMultiThreading.threadWait(10);
-
-			parent.updatePreview(ValueChange.FindBlobsVia);
-		}
+	
+			parent.updatePreview(ValueChange.SHOWSEGMSER);
+		
 	}
 	
 }
