@@ -41,12 +41,12 @@ public class Progress extends SwingWorker<Void, Void> {
 
 				BlobfinderInteractiveSnake snake;
 				if (parent.NearestNeighbourRois.size() > 0)
-					snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois, parent.RadiusMeasure,
+					snake = new BlobfinderInteractiveSnake(parent,parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois, parent.RadiusMeasure,
 							 parent.usefolder, parent.addTrackToName, parent.thirdDimensionslider, parent.fourthDimensionslider, parent.TrackinT, parent.jpb,
 							parent.thirdDimensionSize);
 				else
 
-					snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.RadiusMeasure, parent.usefolder,
+					snake = new BlobfinderInteractiveSnake(parent,parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.RadiusMeasure, parent.usefolder,
 							parent.addTrackToName, parent.thirdDimensionslider, parent.fourthDimensionslider, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
 				parent.jpb.setIndeterminate(false);
 				snake.process();
@@ -81,7 +81,7 @@ public class Progress extends SwingWorker<Void, Void> {
 					
 					for (int i = 0; i < parent.snakeoverlay.size(); ++i) {
 
-						parent.snakeoverlay.get(i).DrawSnake(parent.cp, snake.colorDraw, 1);
+						parent.snakeoverlay.get(i).DrawSnake(parent.cp, parent.colorDraw, 1);
 
 						Roi normalroi = parent.snakeoverlay.get(i).createRoi();
 
@@ -90,7 +90,7 @@ public class Progress extends SwingWorker<Void, Void> {
 						final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, parent.currentimg, parent.RadiusMeasure);
 						
 						AllmeasureRois.add(Bigroi);
-						parent.measurecp.setColor(parent.colorBigDraw);
+						parent.measurecp.setColor(parent.colorDraw);
 						parent.measurecp.setLineWidth(1);
 						parent.measurecp.draw(Bigroi);
 						
@@ -132,7 +132,8 @@ public class Progress extends SwingWorker<Void, Void> {
 				parent.All3DSnakescopy.add(ThreedimensionalSnake);
 				parent.updatePreview(ValueChange.THIRDDIM);
 				IJ.log("SnakeList Size" + parent.All3DSnakes.size());
-
+				new ImagePlus("All Snakes Track Image", parent.snakestack).show();
+				new ImagePlus("All Snakes Measure Image", parent.measuresnakestack).show();
 				return null;
 			}
 

@@ -340,8 +340,8 @@ public class SnakeObject extends AbstractEuclideanSpace implements RealLocalizab
 
 		double sigma = 10; 
 		double ratiocost = 0;
-		double coeff = 1 - Math.exp(-1/(4 * sigma));
-		double a = -4*Math.log(coeff);
+		double coeff = 1 - Math.exp(-(0.2 * 0.2)/(sigma));
+		double a = -(1.0/(0.8 * 0.8))*Math.log(coeff);
 		
 		
 		if (ratio > 0  && ratio <= 0.5)

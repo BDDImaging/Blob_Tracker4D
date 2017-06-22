@@ -269,8 +269,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public int thirdDimension;
 	public int fourthDimension;
 	public int minDiversityInit = 1;
-	public int thirdDimensionSize = 0;
-	public int fourthDimensionSize = 0;
+	public int thirdDimensionSize = 1;
+	public int fourthDimensionSize = 1;
 	public ArrayList<ABSnakeFast> snakeoverlay;
 	public ArrayList<SnakeObject> currentsnakes;
 	public int length = 0;
@@ -284,10 +284,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public Rectangle standardRectangle;
 	public EllipseRoi standardEllipse;
 	public boolean isComputing = false;
-	public boolean findBlobsViaMSER = false;
-	public boolean findBlobsViaDOG = false;
-	public boolean findBlobsViaSEGMSER = false;
-	public boolean findBlobsViaSEGDOG = false;
+	public boolean showMSER = false;
+	public boolean showDOG = false;
+	public boolean showSegMSER = false;
+	public boolean showSegDOG = false;
 	public boolean NormalizeImage = false;
 	public boolean Mediancurr = false;
 	public boolean MedianAll = false;
@@ -297,12 +297,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public boolean propagate = true;
 	public boolean updateThreshold = false;
 	public boolean lookForMinima = false;
-	public boolean Auto = false;
+	public boolean Auto = true;
 	public boolean lookForMaxima = true;
-	public boolean showMSER = false;
-	public boolean showDOG = false;
-	public boolean showSegMSER = false;
-	public boolean showSegDOG = false;
+	
+	public  File userfile;
 	public float delta = 1f;
 	public int deltaInit = 10;
 	public int maxVarInit = 1;
@@ -314,7 +312,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public boolean showKalman = true;
 	public boolean showNN = false;
 	public boolean SaveTxt = true;
-	public boolean SaveXLS = true;
+	public boolean SaveXLS = false;
 	public ImagePlus impcopy;
 	public double CalibrationX;
 	public double CalibrationY;
@@ -325,7 +323,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public Color coloroutSelect = Color.CYAN;
 	public Color colorCreate = Color.red;
 	public Color colorDraw = Color.green;
-	public Color colorBigDraw = Color.yellow;
 	public Color colorKDtree = Color.blue;
 	public Color colorOld = Color.MAGENTA;
 	public Color colorPrevious = Color.gray;
@@ -413,20 +410,20 @@ public class InteractiveActiveContour_ implements PlugIn {
 		return threshold;
 	}
 
-	public boolean getFindBlobsViaMSER() {
-		return findBlobsViaMSER;
+	public boolean getshowMSER() {
+		return showMSER;
 	}
 
-	public void setFindBlobsViaMSER(final boolean findBlobsViaMSER) {
-		this.findBlobsViaMSER = findBlobsViaMSER;
+	public void setshowMSER(final boolean showMSER) {
+		this.showMSER = showMSER;
 	}
 
-	public boolean getFindBlobsViaDOG() {
-		return findBlobsViaDOG;
+	public boolean getshowDOG() {
+		return showDOG;
 	}
 
-	public void setFindBlobsViaDOG(final boolean findBlobsViaDOG) {
-		this.findBlobsViaDOG = findBlobsViaDOG;
+	public void setshowDOG(final boolean showDOG) {
+		this.showDOG = showDOG;
 	}
 
 	public int getTime() {
@@ -553,17 +550,19 @@ public class InteractiveActiveContour_ implements PlugIn {
 		length = imp.getWidth();
 	}
 
-	public InteractiveActiveContour_(final RandomAccessibleInterval<FloatType> originalimgA) {
+	public InteractiveActiveContour_(final RandomAccessibleInterval<FloatType> originalimgA, File userfile ) {
 		this.originalimgA = originalimgA;
+		this.userfile = userfile;
 		standardRectangle = new Rectangle(inix, iniy, (int) originalimgA.dimension(0) - 2 * inix,
 				(int) originalimgA.dimension(1) - 2 * iniy);
 
 	}
 
 	public InteractiveActiveContour_(final RandomAccessibleInterval<FloatType> originalimgA,
-			final RandomAccessibleInterval<FloatType> originalimgB) {
+			final RandomAccessibleInterval<FloatType> originalimgB, File userfile) {
 		this.originalimgA = originalimgA;
 		this.originalimgB = originalimgB;
+		this.userfile = userfile;
 		standardRectangle = new Rectangle(inix, iniy, (int) originalimgA.dimension(0) - 2 * inix,
 				(int) originalimgA.dimension(1) - 2 * iniy);
 
@@ -653,7 +652,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	@Override
 	public void run(String arg) {
-
+		usefolder  = userfile.getParentFile().getAbsolutePath();
+		
 		// Progressbar color
 		// UIManager.put("ProgressBar.selectionForeground", Color.BLUE);
 		// UIManager.put("ProgressBar.foreground", Color.BLUE);
@@ -871,10 +871,15 @@ public class InteractiveActiveContour_ implements PlugIn {
 	 */
 
 	public void updatePreview(final ValueChange change) {
+		
+		
 		CurrentView = getCurrentView();
 		otherCurrentView = getotherCurrentView();
+		
+		
 		overlay = imp.getOverlay();
 		boolean roiChanged = false;
+		overlay = imp.getOverlay();
 		if (overlay == null) {
 
 			overlay = new Overlay();
@@ -901,7 +906,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			newimg = util.FindersUtils.copytoByteImage(currentimg);
 			
-			System.out.println("Current Time point: " + thirdDimension);
+		//	System.out.println("Current Time point: " + thirdDimension);
 			if (imp == null)
 				imp = ImageJFunctions.show(CurrentView);
 			else {
@@ -984,25 +989,37 @@ public class InteractiveActiveContour_ implements PlugIn {
 				if (measureimp != null) {
 
 					for (int i = 0; i < measureoverlay.size(); ++i) {
-						if (measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+						if (measureoverlay.get(i).getStrokeColor() == colorDraw ) {
 							measureoverlay.remove(i);
 							--i;
 						}
 
 					}
 				}
+				if(finalRois!=null){
+				
 				for (int index = 0; index < finalRois.size(); ++index) {
 
 					final Roi or = util.Boundingboxes.CreateBigRoi((PolygonRoi) finalRois.get(index).rois,
 							othercurrentimg, RadiusMeasure);
 
-					or.setStrokeColor(colorBigDraw);
+					or.setStrokeColor(colorDraw);
 					measureoverlay.add(or);
 				
 
 				}
 
-			
+				}
+				else
+				
+					for (int index = 0; index < Rois.size(); ++index){
+						
+						final Roi or = util.Boundingboxes.CreateBigRoi(Rois.get(index),
+								othercurrentimg, RadiusMeasure);
+						or.setStrokeColor(colorDraw);
+						measureoverlay.add(or);
+						
+					}
 
 		}
 
@@ -1040,7 +1057,28 @@ public class InteractiveActiveContour_ implements PlugIn {
 			measureimp.setTitle("Measure image Current View in third dimension: " + " " + thirdDimension + " " + "fourth dimension: " + " "
 					+ fourthDimension);
 			// imp = ImageJFunctions.wrapFloat(CurrentView, "current");
+			
+			
 
+				for (int i = 0; i < overlay.size(); ++i) {
+					if (overlay.get(i).getStrokeColor() == colorDraw  ) {
+						overlay.remove(i);
+						--i;
+					}
+
+				}
+			
+		
+
+				for (int i = 0; i < measureoverlay.size(); ++i) {
+					if (measureoverlay.get(i).getStrokeColor() == colorDraw  ) {
+						measureoverlay.remove(i);
+						--i;
+					}
+
+				}
+			
+			
 			long[] min = { (long) standardRectangle.getMinX(), (long) standardRectangle.getMinY() };
 			long[] max = { (long) standardRectangle.getMaxX(), (long) standardRectangle.getMaxY() };
 			interval = new FinalInterval(min, max);
@@ -1057,26 +1095,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 				newtree = MserTree.buildMserTree(newimg, delta, minSize, maxSize, maxVar, minDiversity, darktobright);
 				Rois = util.FindersUtils.getcurrentRois(newtree);
 				ArrayList<double[]> centerRoi = util.FindersUtils.getRoiMean(newtree);
-				if (imp != null) {
-
-					for (int i = 0; i < overlay.size(); ++i) {
-						if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
-							overlay.remove(i);
-							--i;
-						}
-
-					}
-				}
-				if (measureimp != null) {
-
-					for (int i = 0; i < measureoverlay.size(); ++i) {
-						if (measureoverlay.get(i).getStrokeColor() == colorDraw|| measureoverlay.get(i).getStrokeColor() == colorBigDraw  ) {
-							measureoverlay.remove(i);
-							--i;
-						}
-
-					}
-				}
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
 					double[] center = new double[] { centerRoi.get(index)[0], centerRoi.get(index)[1] };
@@ -1087,6 +1105,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 					overlay.add(or);
 				}
 
+		
 			}
 
 			if (showDOG) {
@@ -1112,26 +1131,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				Rois = util.FindersUtils.getcurrentRois(peaks, sigma, sigma2);
 				
-				if (imp != null) {
-
-					for (int i = 0; i < overlay.size(); ++i) {
-						if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw  ) {
-							overlay.remove(i);
-							--i;
-						}
-
-					}
-				}
-				if (measureimp != null) {
-
-					for (int i = 0; i < measureoverlay.size(); ++i) {
-						if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
-							measureoverlay.remove(i);
-							--i;
-						}
-
-					}
-				}
+				
 				for (int index = 0; index < peaks.size(); ++index) {
 
 					double[] center = new double[] { peaks.get(index).getDoublePosition(0),
@@ -1183,26 +1183,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 				ArrayList<double[]> centerRoi = util.FindersUtils.getRoiMean(newtree);
 				
 				
-				if (imp != null) {
-
-					for (int i = 0; i < overlay.size(); ++i) {
-						if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
-							overlay.remove(i);
-							--i;
-						}
-
-					}
-				}
-				if (measureimp != null) {
-
-					for (int i = 0; i < measureoverlay.size(); ++i) {
-						if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
-							measureoverlay.remove(i);
-							--i;
-						}
-
-					}
-				}
+				
 				for (int index = 0; index < centerRoi.size(); ++index) {
 
 					double[] center = new double[] { centerRoi.get(index)[0], centerRoi.get(index)[1] };
@@ -1260,26 +1241,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				}
 				
-				if (imp != null) {
-
-					for (int i = 0; i < overlay.size(); ++i) {
-						if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
-							overlay.remove(i);
-							--i;
-						}
-
-					}
-				}
-				if (measureimp != null) {
-
-					for (int i = 0; i < measureoverlay.size(); ++i) {
-						if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
-							measureoverlay.remove(i);
-							--i;
-						}
-
-					}
-				}
+				
 
 				for (int index = 0; index < Rois.size(); ++index) {
 					double[] center = new double[] { peaks.get(index).getDoublePosition(0),
@@ -1352,7 +1314,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			if (imp != null) {
 
 				for (int i = 0; i < overlay.size(); ++i) {
-					if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+					if (overlay.get(i).getStrokeColor() == colorDraw) {
 						overlay.remove(i);
 						--i;
 					}
@@ -1362,7 +1324,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			if (measureimp != null) {
 
 				for (int i = 0; i < measureoverlay.size(); ++i) {
-					if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+					if (measureoverlay.get(i).getStrokeColor() == colorDraw ) {
 						measureoverlay.remove(i);
 						--i;
 					}
@@ -1441,7 +1403,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			if (imp != null) {
 
 				for (int i = 0; i < overlay.size(); ++i) {
-					if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+					if (overlay.get(i).getStrokeColor() == colorDraw ) {
 						overlay.remove(i);
 						--i;
 					}
@@ -1451,7 +1413,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			if (measureimp != null) {
 
 				for (int i = 0; i < measureoverlay.size(); ++i) {
-					if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+					if (measureoverlay.get(i).getStrokeColor() == colorDraw ) {
 						measureoverlay.remove(i);
 						--i;
 					}
@@ -1502,7 +1464,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			if (imp != null) {
 
 				for (int i = 0; i < overlay.size(); ++i) {
-					if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+					if (overlay.get(i).getStrokeColor() == colorDraw ) {
 						overlay.remove(i);
 						--i;
 					}
@@ -1512,7 +1474,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			if (measureimp != null) {
 
 				for (int i = 0; i < measureoverlay.size(); ++i) {
-					if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+					if (measureoverlay.get(i).getStrokeColor() == colorDraw ) {
 						measureoverlay.remove(i);
 						--i;
 					}
@@ -1597,7 +1559,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			if (imp != null) {
 
 				for (int i = 0; i < overlay.size(); ++i) {
-					if (overlay.get(i).getStrokeColor() == colorDraw || overlay.get(i).getStrokeColor() == colorBigDraw ) {
+					if (overlay.get(i).getStrokeColor() == colorDraw ) {
 						overlay.remove(i);
 						--i;
 					}
@@ -1607,7 +1569,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			if (measureimp != null) {
 
 				for (int i = 0; i < measureoverlay.size(); ++i) {
-					if (measureoverlay.get(i).getStrokeColor() == colorDraw || measureoverlay.get(i).getStrokeColor() == colorBigDraw ) {
+					if (measureoverlay.get(i).getStrokeColor() == colorDraw ) {
 						measureoverlay.remove(i);
 						--i;
 					}
@@ -2269,7 +2231,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		public void actionPerformed(final ActionEvent arg0) {
 
 			JFileChooser chooserA = new JFileChooser();
-			chooserA.setCurrentDirectory(new java.io.File("."));
+			chooserA.setCurrentDirectory(userfile);
 			chooserA.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 			chooserA.showOpenDialog(panelFirst);
 			usefolder = chooserA.getSelectedFile().getAbsolutePath();
@@ -2288,8 +2250,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public JPanel panelThird = new JPanel();
 	public JPanel panelFourth = new JPanel();
 	public JPanel panelFifth = new JPanel();
-	public JPanel panelSixth = new JPanel();
-	public JPanel panelSeventh = new JPanel();
+
 
 	public void Card() {
 
@@ -2303,14 +2264,12 @@ public class InteractiveActiveContour_ implements PlugIn {
 		panelCont.add(panelThird, "3");
 		panelCont.add(panelFourth, "4");
 		panelCont.add(panelFifth, "5");
-		panelCont.add(panelSixth, "6");
-		panelCont.add(panelSeventh, "7");
 		CheckboxGroup Finders = new CheckboxGroup();
 
-		final Checkbox mser = new Checkbox("MSER + Snakes", Finders, findBlobsViaMSER);
-		final Checkbox dog = new Checkbox("DoG + Snakes", Finders, findBlobsViaDOG);
-		final Checkbox Segmser = new Checkbox("Segmentation + MSER + Snakes", Finders, findBlobsViaSEGMSER);
-		final Checkbox Segdog = new Checkbox("Segmentation + DoG + Snakes", Finders, findBlobsViaSEGDOG);
+		final Checkbox mser = new Checkbox("MSER + Snakes", Finders, showMSER);
+		final Checkbox dog = new Checkbox("DoG + Snakes", Finders, showDOG);
+		final Checkbox Segmser = new Checkbox("Segmentation + MSER + Snakes", Finders, showSegMSER);
+		final Checkbox Segdog = new Checkbox("Segmentation + DoG + Snakes", Finders, showSegDOG);
 		final Button JumpFrame = new Button("Jump in third dimension to :");
 		final Button JumpSlice = new Button("Jump in fourth dimension to :");
 		final Label timeText = new Label("Third Dimensíonal slice = " + this.thirdDimensionslider, Label.CENTER);
@@ -2319,8 +2278,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 		final JButton ChooseWorkspace = new JButton("Choose Directory");
 		final JLabel outputfilename = new JLabel("Enter output filename: ");
 		TextField inputField = new TextField();
+		inputField.setText(userfile.getName().replaceFirst("[.][^.]+$", ""));
+
 		inputField.setColumns(10);
-		final JButton Confirm = new JButton("Confirm Directory Selection");
 
 		final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
 				thirdDimensionSize);
@@ -2452,7 +2412,19 @@ public class InteractiveActiveContour_ implements PlugIn {
 		Adjustradi.setBackground(new Color(1, 0, 1));
 
 		final Label sizeTextX = new Label("Increase Radius for Intensity Measurement = " + RadiusMeasure, Label.CENTER);
+		// Tracker choice panel
 
+		final Checkbox KalmanTracker = new Checkbox("Use Kalman Filter for tracking");
+		final Checkbox NearestNeighborTracker = new Checkbox("Use Nearest Neighbour tracker");
+		final Label Kal = new Label("Use Kalman Filter for probabilistic tracking");
+		final Label Det = new Label("Use Nearest Neighbour tracking");
+		final Checkbox txtfile = new Checkbox("Save tracks as TXT file", SaveTxt);
+		final Checkbox xlsfile = new Checkbox("Save tracks as XLS file", SaveXLS);
+		final Checkbox sameradius = new Checkbox("Use same radius for measurment", false);
+		Kal.setForeground(new Color(255, 255, 255));
+		Kal.setBackground(new Color(1, 0, 1));
+		Det.setBackground(new Color(1, 0, 1));
+		Det.setForeground(new Color(255, 255, 255));
 		Progressmax = Rois.size();
 
 		panelThird.setLayout(layout);
@@ -2460,13 +2432,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		panelThird.add(Namesnake, c);
 
-		++c.gridy;
-		c.insets = new Insets(10, 160, 10, 160);
-		panelThird.add(Singlesnake, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 160, 10, 160);
-		panelThird.add(Redosnake, c);
+	
+	
 
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
@@ -2477,85 +2444,60 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
+		panelThird.add(sameradius, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
 		panelThird.add(sizeTextX, c);
 	
+		if (thirdDimensionSize > 1) {
+			
+			++c.gridy;
+			c.insets = new Insets(10, 160, 10, 160);
+			panelThird.add(snakes, c);
+		}
+		if (fourthDimensionSize > 1) {
+			++c.gridy;
+			c.insets = new Insets(0, 145, 0, 145);
+			panelThird.add(AutomatedSnake, c);
+		}
 
-	
+		++c.gridy;
+		c.insets = new Insets(10, 160, 10, 160);
+		panelThird.add(RedoViewsnakes, c);
+		++c.gridy;
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelThird.add(Kal, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelThird.add(KalmanTracker, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelThird.add(Det, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 50);
+		panelThird.add(NearestNeighborTracker, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelThird.add(txtfile, c);
 
 		/* Configuration */
 		RadiusMeasurebar.addAdjustmentListener(new RadiusMeasureListener(sizeTextX, RadiusMeasureMin, RadiusMeasureMax));
 		
 
-		/* Location */
-		panelFourth.setLayout(layout);
-		final Label Namebig = new Label("Step 4", Label.CENTER);
-		panelFourth.add(Namebig, c);
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.gridx = 0;
-		c.gridy = 0;
-		c.weightx = 4;
-		c.weighty = 1.5;
+		sameradius.addItemListener(new SameMeasureListener());
+		
+	
 
-		if (thirdDimensionSize > 1) {
-			++c.gridy;
-			c.insets = new Insets(0, 145, 0, 105);
-			panelFourth.add(Auto, c);
+		
 
-			++c.gridy;
-			c.insets = new Insets(10, 160, 10, 160);
-			panelFourth.add(snakes, c);
-		}
-		if (fourthDimensionSize > 1) {
-			++c.gridy;
-			c.insets = new Insets(0, 145, 0, 145);
-			panelFourth.add(AutomatedSnake, c);
-		}
-
-		++c.gridy;
-		c.insets = new Insets(10, 160, 10, 160);
-		panelFourth.add(RedoViewsnakes, c);
-		++c.gridy;
-
-		// Tracker choice panel
-
-		final Checkbox KalmanTracker = new Checkbox("Use Kalman Filter for tracking");
-		final Checkbox NearestNeighborTracker = new Checkbox("Use Nearest Neighbour tracker");
-		final Label Kal = new Label("Use Kalman Filter for probabilistic tracking");
-		final Label Det = new Label("Use Nearest Neighbour tracking");
-		final Checkbox txtfile = new Checkbox("Save tracks as TXT file", SaveTxt);
-		final Checkbox xlsfile = new Checkbox("Save tracks as XLS file", SaveXLS);
-
-		Kal.setForeground(new Color(255, 255, 255));
-		Kal.setBackground(new Color(1, 0, 1));
-		Det.setBackground(new Color(1, 0, 1));
-		Det.setForeground(new Color(255, 255, 255));
-		panelFifth.setLayout(layout);
-		final Label Nametrack = new Label("Step 5", Label.CENTER);
-		panelFifth.add(Nametrack, c);
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelFifth.add(Kal, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelFifth.add(KalmanTracker, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelFifth.add(Det, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 50);
-		panelFifth.add(NearestNeighborTracker, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		panelFifth.add(txtfile, c);
-
-		++c.gridy;
-		c.insets = new Insets(10, 10, 0, 0);
-		panelFifth.add(xlsfile, c);
-
+	
+		
 		KalmanTracker.addItemListener(new KalmanchoiceListener());
 		NearestNeighborTracker.addItemListener(new NNListener());
 		txtfile.addItemListener(new SaveasTXT());
@@ -2575,7 +2517,6 @@ public class InteractiveActiveContour_ implements PlugIn {
 		snakes.addActionListener(new snakeButtonListener());
 		RedoViewsnakes.addActionListener(new RedosnakeButtonListener());
 		AutomatedSnake.addActionListener(new moveAllListener());
-		Auto.addItemListener(new AutoListener());
 		Ends.setForeground(new Color(255, 255, 255));
 		Ends.setBackground(new Color(1, 0, 1));
 
@@ -2633,7 +2574,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			TrackModel model = new TrackModel(graph);
 			model.getDirectedNeighborIndex();
-
+/*
 			if (displaySelectedTrack == 0) {
 
 				DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw, true, 0);
@@ -2644,11 +2585,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 				totaldisplaytracksmeasure.getImp();
 
 			}
-
-			else {
+*/
 
 				for (int index = 0; index < IDALL.size(); ++index) {
-					if (displaySelectedTrack == index + 1) {
+					if (displaySelectedTrack == index) {
 
 						DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw,
 								false, displaySelectedTrack);
@@ -2662,7 +2602,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				}
 
-			}
+			
 
 		}
 
@@ -2701,6 +2641,24 @@ public class InteractiveActiveContour_ implements PlugIn {
 		}
 	}
 
+	protected class SameMeasureListener implements ItemListener {
+
+		@Override
+		public void itemStateChanged(ItemEvent e) {
+			
+			
+				showNew = true;
+				updatePreview(ValueChange.SHOWNEW);
+			
+			
+		}
+
+		
+		
+		
+		
+	}
+	
 	protected class RadiusMeasureListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
@@ -2740,17 +2698,17 @@ public class InteractiveActiveContour_ implements PlugIn {
 			} else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
 				showNN = true;
-				panelSixth.removeAll();
-				panelSixth.repaint();
+				panelFourth.removeAll();
+				panelFourth.repaint();
 				final GridBagLayout layout = new GridBagLayout();
 				final GridBagConstraints c = new GridBagConstraints();
 				c.fill = GridBagConstraints.HORIZONTAL;
 				c.gridx = 0;
 				c.gridy = 0;
 				c.weightx = 1;
-				panelSixth.setLayout(layout);
-				final Label Name = new Label("Step 6", Label.CENTER);
-				panelSixth.add(Name, c);
+				panelFourth.setLayout(layout);
+				final Label Name = new Label("Step 4", Label.CENTER);
+				panelFourth.add(Name, c);
 				initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin,
 						initialSearchradiusMax, scrollbarSize);
 
@@ -2764,14 +2722,14 @@ public class InteractiveActiveContour_ implements PlugIn {
 						Label.CENTER);
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(MaxMovText, c);
+				panelFourth.add(MaxMovText, c);
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(Maxrad, c);
+				panelFourth.add(Maxrad, c);
 
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(track, c);
+				panelFourth.add(track, c);
 
 				Maxrad.addAdjustmentListener(
 						new maxSearchradiusListener(MaxMovText, maxSearchradiusMin, maxSearchradiusMax));
@@ -2794,7 +2752,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 			} else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
 				showKalman = true;
-				panelSixth.removeAll();
+				panelFourth.removeAll();
 
 				final GridBagLayout layout = new GridBagLayout();
 				final GridBagConstraints c = new GridBagConstraints();
@@ -2802,9 +2760,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 				c.gridx = 0;
 				c.gridy = 0;
 				c.weightx = 1;
-				panelSixth.setLayout(layout);
-				final Label Name = new Label("Step 6", Label.CENTER);
-				panelSixth.add(Name, c);
+				panelFourth.setLayout(layout);
+				final Label Name = new Label("Step 4", Label.CENTER);
+				panelFourth.add(Name, c);
 				final Scrollbar rad = new Scrollbar(Scrollbar.HORIZONTAL, initialSearchradiusInit, 10, 0,
 						10 + scrollbarSize);
 				initialSearchradius = computeValueFromScrollbarPosition(initialSearchradiusInit, initialSearchradiusMin,
@@ -2825,10 +2783,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(SearchText, c);
+				panelFourth.add(SearchText, c);
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(rad, c);
+				panelFourth.add(rad, c);
 
 				final Scrollbar Maxrad = new Scrollbar(Scrollbar.HORIZONTAL, maxSearchradiusInit, 10, 0,
 						10 + scrollbarSize);
@@ -2839,10 +2797,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(MaxMovText, c);
+				panelFourth.add(MaxMovText, c);
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(Maxrad, c);
+				panelFourth.add(Maxrad, c);
 
 				final Scrollbar Miss = new Scrollbar(Scrollbar.HORIZONTAL, missedframesInit, 10, 0, 10 + scrollbarSize);
 				Miss.setBlockIncrement(1);
@@ -2851,30 +2809,30 @@ public class InteractiveActiveContour_ implements PlugIn {
 				final Label LostText = new Label("Objects allowed to be lost for #frames" + missedframes, Label.CENTER);
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(LostText, c);
+				panelFourth.add(LostText, c);
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(Miss, c);
+				panelFourth.add(Miss, c);
 
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(CostalphaText, c);
+				panelFourth.add(CostalphaText, c);
 
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(alphabar, c);
+				panelFourth.add(alphabar, c);
 
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(CostbetaText, c);
+				panelFourth.add(CostbetaText, c);
 
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(betabar, c);
+				panelFourth.add(betabar, c);
 
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 50);
-				panelSixth.add(track, c);
+				panelFourth.add(track, c);
 
 				rad.addAdjustmentListener(
 						new SearchradiusListener(SearchText, initialSearchradiusMin, initialSearchradiusMax));
@@ -2886,8 +2844,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				track.addActionListener(new TrackerButtonListener());
 
-				panelSixth.repaint();
-				panelSixth.validate();
+				panelFourth.repaint();
+				panelFourth.validate();
 			}
 
 		}
@@ -3399,13 +3357,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			}
 
-			for (int frame = 0; frame < thirdDimensionSize; ++frame)
 
 				blobtracker.process();
 
 			graph = blobtracker.getResult();
 
-			for (int frame = 0; frame < thirdDimensionSize; ++frame)
 
 				IJ.log("Tracking Complete " + " " + "Displaying results");
 
@@ -3414,6 +3370,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 			TrackModel model = new TrackModel(graph);
 
 			model.getDirectedNeighborIndex();
+			
+		//	DisplayGraph tracks = new DisplayGraph(totalimp, graph, colorDraw);
+		//	tracks.getClass();
+			
 			ResultsTable rt = new ResultsTable();
 			// Get all the track id's
 			for (final Integer id : model.trackIDs(true)) {
@@ -3526,8 +3486,9 @@ public class InteractiveActiveContour_ implements PlugIn {
 			c.gridy = 0;
 			c.weightx = 4;
 			c.weighty = 1.5;
-
-			panelSeventh.setLayout(layout);
+			final Label Name = new Label("Step 5", Label.CENTER);
+			panelFifth.add(Name, c);
+			panelFifth.setLayout(layout);
 
 			final Label Done = new Label("Hope that everything was to your satisfaction!");
 			final Button Exit = new Button("Close and exit");
@@ -3535,7 +3496,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			String[] choicestrack = new String[IDALL.size() + 1];
 
-			choicestrack[0] = "Display All";
+		//	choicestrack[0] = "Display All";
 			Comparator<Integer> Seedidcomparison = new Comparator<Integer>() {
 
 				@Override
@@ -3552,7 +3513,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				String currenttrack = Double.toString(IDALL.get(index));
 
-				choicestrack[index + 1] = "Track " + currenttrack;
+				choicestrack[index] = "Track " + currenttrack;
 			}
 
 			JComboBox<String> cbtrack = new JComboBox<String>(choicestrack);
@@ -3560,28 +3521,28 @@ public class InteractiveActiveContour_ implements PlugIn {
 			Done.setBackground(new Color(1, 0, 1));
 			Done.setForeground(new Color(255, 255, 255));
 
-			panelSeventh.removeAll();
+			panelFifth.removeAll();
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 50);
-			panelSeventh.add(lbl, c);
+			panelFifth.add(lbl, c);
 
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 50);
-			panelSeventh.add(cbtrack, c);
+			panelFifth.add(cbtrack, c);
 
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 50);
-			panelSeventh.add(Done, c);
+			panelFifth.add(Done, c);
 
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 50);
-			panelSeventh.add(Exit, c);
+			panelFifth.add(Exit, c);
 
 			cbtrack.addActionListener(new TrackDisplayListener(cbtrack, originalimgA));
 			Exit.addActionListener(new FinishedButtonListener(Cardframe, true));
 
-			panelSeventh.repaint();
-			panelSeventh.validate();
+			panelFifth.repaint();
+			panelFifth.validate();
 			Cardframe.pack();
 
 		}

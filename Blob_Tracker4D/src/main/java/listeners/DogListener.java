@@ -29,13 +29,13 @@ public class DogListener implements ItemListener {
 	@Override
 	public void itemStateChanged(final ItemEvent arg0) {
 
-		boolean oldState = parent.findBlobsViaDOG;
+		boolean oldState = parent.showDOG;
 		if (arg0.getStateChange() == ItemEvent.DESELECTED)
-			parent.findBlobsViaDOG = false;
+			parent.showDOG = false;
 		else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
-			parent.findBlobsViaDOG = true;
-			parent.findBlobsViaMSER = false;
+			parent.showDOG = true;
+			parent.showMSER = false;
 			parent.updatePreview(ValueChange.THIRDDIM);
 
 			parent.panelSecond.removeAll();

@@ -26,7 +26,7 @@ public class FindBlobsListener implements ActionListener {
 
 			RandomAccessibleInterval<FloatType> groundframe = parent.currentimg;
 
-			if (parent.findBlobsViaMSER) {
+			if (parent.showMSER) {
 
 				parent.updatePreview(ValueChange.SHOWMSER);
 
@@ -37,7 +37,7 @@ public class FindBlobsListener implements ActionListener {
 
 			}
 
-			if (parent.findBlobsViaDOG) {
+			if (parent.showDOG) {
 
 				parent.updatePreview(ValueChange.SHOWDOG);
 

@@ -27,16 +27,16 @@ public class SegMserListener implements ItemListener {
 	
 	@Override
 	public void itemStateChanged(final ItemEvent arg0) {
-		boolean oldState = parent.findBlobsViaSEGMSER;
+		boolean oldState = parent.showSegMSER;
 
 		if (arg0.getStateChange() == ItemEvent.DESELECTED)
-			parent.findBlobsViaSEGMSER = false;
+			parent.showSegMSER = false;
 		else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
-			parent.findBlobsViaSEGMSER = true;
-			parent.findBlobsViaSEGDOG = true;
-			parent.findBlobsViaMSER = false;
-			parent.findBlobsViaDOG = false;
+			parent.showSegDOG = false;
+			parent.showSegMSER = true;
+			parent.showMSER = false;
+			parent.showDOG = false;
 			parent.updatePreview(ValueChange.THIRDDIM);
 
 			parent.panelSecond.removeAll();

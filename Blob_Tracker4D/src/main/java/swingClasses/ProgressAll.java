@@ -85,11 +85,11 @@ public class ProgressAll extends SwingWorker<Void, Void>  {
 
 				BlobfinderInteractiveSnake snake;
 				if (parent.NearestNeighbourRois.size() > 0)
-					snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois,
+					snake = new BlobfinderInteractiveSnake(parent,parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois,
 							parent.RadiusMeasure, parent.usefolder, parent.addTrackToName, z, indexx, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
 				else
 
-					snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.RadiusMeasure,
+					snake = new BlobfinderInteractiveSnake(parent,parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.RadiusMeasure,
 							parent.usefolder, parent.addTrackToName, z, indexx, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
 
 				RoiManager manager = RoiManager.getInstance();

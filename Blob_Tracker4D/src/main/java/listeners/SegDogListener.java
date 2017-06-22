@@ -29,16 +29,16 @@ public class SegDogListener implements ItemListener {
 	
 	@Override
 	public void itemStateChanged(final ItemEvent arg0) {
-		boolean oldState = parent.findBlobsViaSEGMSER;
+		boolean oldState = parent.showSegDOG;
 
 		if (arg0.getStateChange() == ItemEvent.DESELECTED)
-			parent.findBlobsViaSEGDOG = false;
+			parent.showSegDOG = false;
 		else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
-			parent.findBlobsViaSEGDOG = true;
-			parent.findBlobsViaMSER = false;
-			parent.findBlobsViaDOG = false;
-			parent.findBlobsViaSEGMSER = false;
+			parent.showSegDOG = true;
+			parent.showSegMSER = false;
+			parent.showDOG = false;
+			parent.showSegMSER = false;
 			parent.updatePreview(ValueChange.THIRDDIM);
 
 			parent.panelSecond.removeAll();

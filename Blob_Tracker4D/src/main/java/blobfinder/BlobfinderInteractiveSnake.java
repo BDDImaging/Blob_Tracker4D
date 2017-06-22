@@ -71,6 +71,8 @@ import net.imglib2.util.ValuePair;
 import net.imglib2.view.Views;
 import snakes.ABSnakeFast;
 import snakes.ComSnake;
+import snakes.InteractiveActiveContour_;
+import snakes.InteractiveActiveContour_.ValueChange;
 import snakes.SnakeConfig;
 import snakes.SnakeConfigDriver;
 import snakes.SnakeObject;
@@ -109,7 +111,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	int nbRois;
 	Roi rorig = null;
 	Roi processRoi = null;
-	public Color colorDraw = Color.RED;
+
 	public boolean darktoBright = false;
 
 	private final int ndims;
@@ -168,8 +170,8 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	String usefolder;
 	String addToName;
 	private final ConcurrentHashMap<String, Double> features = new ConcurrentHashMap<String, Double>();
-
-	public BlobfinderInteractiveSnake(final RandomAccessibleInterval<FloatType> source,
+	final InteractiveActiveContour_ parent;
+	public BlobfinderInteractiveSnake(final InteractiveActiveContour_ parent,final RandomAccessibleInterval<FloatType> source,
 			final RandomAccessibleInterval<FloatType> target, ArrayList<Roi> rois, final double size,
 			 final String usefolder, final String addToName, final int thirdDimension,
 			final int fourthDimension, final boolean TrackinT, final JProgressBar jpb, final int duration) {
@@ -185,6 +187,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		this.addToName = addToName;
 		this.jpb = jpb;
 		this.duration = duration;
+		this.parent = parent;
 		ndims = source.numDimensions();
 
 	}
@@ -281,9 +284,9 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		Roi roi;
 
 		currentimg = source;
-/*
-		// Expand the image by 10 pixels
 
+		// Expand the image by 10 pixels
+/*
 		Interval spaceinterval = Intervals.createMinMax(
 				new long[] { currentimg.min(0), currentimg.min(1), currentimg.max(0), currentimg.max(1) });
 		Interval interval = Intervals.expand(spaceinterval, 10);
@@ -295,18 +298,15 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 		for (int i = 0; i < RoisOrig.size(); i++) {
 			percent = (Math.round(100 * (i + 1) / (nbRois)));
 			roi = RoisOrig.get(i);
-			if(roi.getPolygon().intersects(currentimg.min(0), currentimg.min(1) , 5, 5))
-				continue;
-			if(roi.getPolygon().intersects(currentimg.max(0), currentimg.max(1) , 5, 5))
-				continue;
-			if(roi.getPolygon().intersects(currentimg.min(0), currentimg.max(1) , 5, 5))
-				continue;
-			if(roi.getPolygon().intersects(currentimg.max(0), currentimg.min(1) , 5, 5))
-				continue;
+			
 			
 			System.out.println("processing fourthDimension no. " + fourthDimension + " thirdDimension no. "
 					+ thirdDimension + " with roi " + i);
-
+			int boundary = 30;
+			Rectangle standardRectangle = new Rectangle(boundary, boundary, (int) currentimg.dimension(0) - 2 * boundary ,
+					(int) currentimg.dimension(1) - 2 * boundary);
+			
+			if(roi.getPolygon().intersects(standardRectangle)){
 			snake = processSnake(roi, i + 1);
 			snake.killImages();
 
@@ -315,33 +315,19 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 			RoisResult[i].setName("res-" + i);
 			RoisCurrent[i] = snake.createRoi();
 
-		
+			
+			
+			
+			
 			snakelist.add(snake);
 
-			if(snake.createRoi().getPolygon().intersects(currentimg.min(0), currentimg.min(1) , 5, 5)){
-				
-				snakelist.remove(snake);
-				
-			}
 			
-            if(snake.createRoi().getPolygon().intersects(currentimg.max(0), currentimg.max(1), 5 , 5)){
-				
-				snakelist.remove(snake);
-				
-			}
+			
+			
             
 
-			if(snake.createRoi().getPolygon().intersects(currentimg.min(0), currentimg.max(1) , 5, 5)){
-				
-				snakelist.remove(snake);
-				
-			}
 			
-            if(snake.createRoi().getPolygon().intersects(currentimg.max(0), currentimg.min(1), 5 , 5)){
-				
-				snakelist.remove(snake);
-				
-			}
+			
 			
 			if (RoisResult[i] != null ) {
 
@@ -361,7 +347,12 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 				final double Size = props[10];
 				
 				
-				
+				parent.overlay.add(util.Boundingboxes.CreateBigRoi(RoisResult[i], parent.currentimg, 0));
+				parent.overlay.setStrokeColor(parent.colorDraw);
+				Roi Bigroi = util.Boundingboxes.CreateBigRoi(RoisResult[i], parent.othercurrentimg, parent.RadiusMeasure);
+				parent.measureoverlay.add(Bigroi);
+				parent.measureoverlay.setStrokeColor(parent.colorDraw);
+				parent.updatePreview(ValueChange.THIRDDIM);
 				
 				finalrois.add(RoisResult[i]);
 
@@ -379,7 +370,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 				jpb.setValue((int) percent);
 				jpb.setOpaque(true);
 				jpb.setStringPainted(true);
-				jpb.setString("Current time point = " + thirdDimension + "/" + duration);
+				jpb.setString("Current time point = " + thirdDimension + "/" + (duration));
 				}
 			}
 
@@ -396,6 +387,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 			}
 
 		}
+		}
 
 		return true;
 	}
@@ -407,14 +399,10 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 
 	private boolean Dialogue() {
 
-		// array of colors
-		String[] colors = { "Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "Black", "White" };
-		int indexcol = 0;
 		// create dialog
 		GenericDialog gd = new GenericDialog("Snake");
 		gd.addNumericField("Gradient_threshold:", Gradthresh, 0);
 		gd.addNumericField("Number_of_iterations:", ite, 0);
-		gd.addChoice("Draw_color:", colors, colors[indexcol]);
 		gd.addCheckbox("Save_rois:", saverois);
 
 		gd.addCheckbox("Display Snake Stack", displaysnake);
@@ -435,37 +423,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 			step = 1;
 		}
 
-		// color choice of display
-		indexcol = gd.getNextChoiceIndex();
-		switch (indexcol) {
-		case 0:
-			colorDraw = Color.red;
-			break;
-		case 1:
-			colorDraw = Color.green;
-			break;
-		case 2:
-			colorDraw = Color.blue;
-			break;
-		case 3:
-			colorDraw = Color.cyan;
-			break;
-		case 4:
-			colorDraw = Color.magenta;
-			break;
-		case 5:
-			colorDraw = Color.yellow;
-			break;
-		case 6:
-			colorDraw = Color.black;
-			break;
-		case 7:
-			colorDraw = Color.white;
-			break;
-		default:
-			colorDraw = Color.yellow;
-		}
-
+		
 		saverois = gd.getNextBoolean();
 		displaysnake = gd.getNextBoolean();
 		advanced = gd.getNextBoolean();

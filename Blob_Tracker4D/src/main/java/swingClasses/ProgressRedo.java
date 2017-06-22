@@ -42,11 +42,11 @@ public class ProgressRedo extends SwingWorker<Void, Void>  {
 			BlobfinderInteractiveSnake snake;
 			parent.putFeature(parent.SNAKEPROGRESS, Double.valueOf(parent.AllSliceSnakes.size()));
 			if (parent.NearestNeighbourRois.size() > 0)
-				snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois, parent.RadiusMeasure, parent.usefolder, parent.addTrackToName, parent.thirdDimensionslider, parent.fourthDimensionslider, parent.TrackinT, parent.jpb,
+				snake = new BlobfinderInteractiveSnake(parent,parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois, parent.RadiusMeasure, parent.usefolder, parent.addTrackToName, parent.thirdDimensionslider, parent.fourthDimensionslider, parent.TrackinT, parent.jpb,
 						parent.thirdDimensionSize);
 			else
 
-				snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.RadiusMeasure, parent.usefolder,
+				snake = new BlobfinderInteractiveSnake(parent,parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.RadiusMeasure, parent.usefolder,
 						parent.addTrackToName, parent.thirdDimensionslider, parent.fourthDimensionslider, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
 
 			snake.process();
@@ -66,7 +66,7 @@ public class ProgressRedo extends SwingWorker<Void, Void>  {
 
 				for (int i = 0; i < parent.snakeoverlay.size(); ++i) {
 
-					parent.snakeoverlay.get(i).DrawSnake(parent.cp, snake.colorDraw, 1);
+					parent.snakeoverlay.get(i).DrawSnake(parent.cp, parent.colorDraw, 1);
 
 					Roi normalroi = parent.snakeoverlay.get(i).createRoi();
 

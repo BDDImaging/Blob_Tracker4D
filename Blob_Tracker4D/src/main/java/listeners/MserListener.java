@@ -28,14 +28,15 @@ public class MserListener implements ItemListener {
 	
 	@Override
 	public void itemStateChanged(final ItemEvent arg0) {
-		boolean oldState = parent.findBlobsViaMSER;
+		boolean oldState = parent.showMSER;
 
 		if (arg0.getStateChange() == ItemEvent.DESELECTED)
-			parent.findBlobsViaMSER = false;
+			parent.showMSER = false;
 		else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
-			parent.findBlobsViaMSER = true;
-			parent.findBlobsViaDOG = false;
+			parent.showMSER = true;
+			parent.showDOG = false;
+			
 			parent.updatePreview(ValueChange.THIRDDIM);
 
 			parent.panelSecond.removeAll();

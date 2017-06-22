@@ -60,20 +60,44 @@ public class ProgressSnake extends SwingWorker<Void, Void>  {
 			parent.otherCurrentView = parent.getotherCurrentView();
 
 			parent.updatePreview(ValueChange.THIRDDIMTrack);
+			
+			for (int i = 0; i < parent.overlay.size(); ++i) {
+				if (parent.overlay.get(i).getStrokeColor() == parent.colorDraw  ) {
+					parent.overlay.remove(i);
+					--i;
+				}
 
+			}
+		
+	
+
+			for (int i = 0; i < parent.measureoverlay.size(); ++i) {
+				if (parent.measureoverlay.get(i).getStrokeColor() == parent.colorDraw  ) {
+					parent.measureoverlay.remove(i);
+					--i;
+				}
+
+			}
+			
 			BlobfinderInteractiveSnake snake;
+			
+			parent.snakestack.addSlice(parent.imp.getImageStack().getProcessor(z).convertToRGB());
+			parent.measuresnakestack.addSlice(parent.measureimp.getImageStack().getProcessor(z).convertToRGB());
+
+		    parent.cp = (ColorProcessor) (parent.snakestack.getProcessor(z).duplicate());
+			parent.measurecp = (ColorProcessor) (parent.measuresnakestack.getProcessor(z).duplicate());
 			if (parent.NearestNeighbourRois.size() > 0)
-				snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois, parent.RadiusMeasure, parent.usefolder, parent.addTrackToName, z, 0, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
+				snake = new BlobfinderInteractiveSnake(parent,parent.CurrentView, parent.otherCurrentView, parent.NearestNeighbourRois, parent.RadiusMeasure, parent.usefolder, parent.addTrackToName, z, 0, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
 			else
 
-				snake = new BlobfinderInteractiveSnake(parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.RadiusMeasure, parent.usefolder,
+				snake = new BlobfinderInteractiveSnake(parent,parent.CurrentView, parent.otherCurrentView, parent.Rois, parent.RadiusMeasure, parent.usefolder,
 						parent.addTrackToName, z, 0, parent.TrackinT, parent.jpb, parent.thirdDimensionSize);
 
 			if (parent.Auto && z > next)
 				snake.Auto = true;
-
+		
 			snake.process();
-
+		
 			parent.usefolder = snake.getFolder();
 			parent.addTrackToName = snake.getFile();
 			parent.finalRois = snake.getfinalRois();
@@ -81,39 +105,28 @@ public class ProgressSnake extends SwingWorker<Void, Void>  {
 
 			parent.snakeoverlay = snake.getABsnake();
 			
-			parent.snakestack.addSlice(parent.imp.getImageStack().getProcessor(z).convertToRGB());
-			parent.measuresnakestack.addSlice(parent.measureimp.getImageStack().getProcessor(z).convertToRGB());
-
-		 parent.cp = (ColorProcessor) (parent.snakestack.getProcessor(z).duplicate());
-			parent.measurecp = (ColorProcessor) (parent.measuresnakestack.getProcessor(z).duplicate());
-			parent.overlay.clear();
 			
-			for (int i = 0; i < parent.snakeoverlay.size(); ++i) {
-				Roi normalroi = parent.snakeoverlay.get(i).createRoi();
-				parent.overlay.add(normalroi);
-			}
 			
 				for (int i = 0; i < parent.snakeoverlay.size(); ++i) {
 
-					parent.snakeoverlay.get(i).DrawSnake(parent.cp, snake.colorDraw, 1);
+					parent.snakeoverlay.get(i).DrawSnake(parent.cp, parent.colorDraw, 1);
 
 					Roi normalroi = parent.snakeoverlay.get(i).createRoi();
 
 					AllRois.add(normalroi);
 					
-					final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, parent.currentimg, parent.RadiusMeasure);
+					final Roi Bigroi = util.Boundingboxes.CreateBigRoi(normalroi, parent.othercurrentimg, parent.RadiusMeasure);
 					
 					AllmeasureRois.add(Bigroi);
 					
-					parent.measurecp.setColor(parent.colorBigDraw);
-					parent.measurecp.setLineWidth(1);
-					parent.measurecp.draw(Bigroi);
+				
 				}
 
 				
 				parent.snakestack.setPixels(parent.cp.getPixels(), z);
 				parent.measuresnakestack.setPixels(parent.measurecp.getPixels(), z);
 			
+			    
 
 			if (parent.All3DSnakes != null) {
 
@@ -142,6 +155,8 @@ public class ProgressSnake extends SwingWorker<Void, Void>  {
 		
 		parent.AllSnakerois.put(parent.thirdDimension, AllRois);
 		parent.AllSnakeMeasurerois.put(parent.thirdDimension, AllmeasureRois);
+		
+		
 		
 		IJ.log("SnakeList Size" +parent.All3DSnakes.size());
 
