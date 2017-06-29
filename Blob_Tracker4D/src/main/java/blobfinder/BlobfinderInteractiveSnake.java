@@ -132,10 +132,10 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 	// threshold of edges
 	int Gradthresh = 2;
 	// how far to look for edges
-	int DistMAX = 20;
+	int DistMAX = 100;
 
-	double Displacement_min = 0.1;
-	double Displacement_max = 2.0;
+	double Displacement_min = 0.5;
+	double Displacement_max = 5.0;
 	double Threshold_dist_positive = 10;
 	double Threshold_dist_negative = 10;
 	double Inv_alpha_min = 0.2;
@@ -302,7 +302,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 			
 			System.out.println("processing fourthDimension no. " + fourthDimension + " thirdDimension no. "
 					+ thirdDimension + " with roi " + i);
-			int boundary = 30;
+			int boundary = 5;
 			Rectangle standardRectangle = new Rectangle(boundary, boundary, (int) currentimg.dimension(0) - 2 * boundary ,
 					(int) currentimg.dimension(1) - 2 * boundary);
 			

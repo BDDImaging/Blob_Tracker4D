@@ -204,8 +204,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public long minSize = 1;
 	public long maxSize = 1000;
 	public long minSizemin = 0;
-	public long minSizemax = 100;
-	public long maxSizemin = 100;
+	public long minSizemax = 10000;
+	public long maxSizemin = 1;
 	public long maxSizemax = 10000;
 	public int fourthDimensionslider = 1;
 	public int fourthDimensionsliderInit = 1;
@@ -2574,21 +2574,25 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			TrackModel model = new TrackModel(graph);
 			model.getDirectedNeighborIndex();
-/*
+
 			if (displaySelectedTrack == 0) {
 
+				/*
 				DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw, true, 0);
 				totaldisplaytracks.getImp();
 
 				DisplaymodelGraph totaldisplaytracksmeasure = new DisplaymodelGraph(displaymeasureimp, graph, colorDraw,
 						true, 0);
 				totaldisplaytracksmeasure.getImp();
-
+               */
+				
+				IJ.log(" " + " Not a good idea to display all tracks ");
 			}
-*/
+
+			else {
 
 				for (int index = 0; index < IDALL.size(); ++index) {
-					if (displaySelectedTrack == index) {
+					if (displaySelectedTrack == index + 1) {
 
 						DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw,
 								false, displaySelectedTrack);
@@ -2602,7 +2606,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				}
 
-			
+			}
 
 		}
 
@@ -3496,7 +3500,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			String[] choicestrack = new String[IDALL.size() + 1];
 
-		//	choicestrack[0] = "Display All";
+			choicestrack[0] = "Display All (disabled)";
 			Comparator<Integer> Seedidcomparison = new Comparator<Integer>() {
 
 				@Override
@@ -3513,7 +3517,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				String currenttrack = Double.toString(IDALL.get(index));
 
-				choicestrack[index] = "Track " + currenttrack;
+				choicestrack[index + 1] = "Track " + currenttrack;
 			}
 
 			JComboBox<String> cbtrack = new JComboBox<String>(choicestrack);

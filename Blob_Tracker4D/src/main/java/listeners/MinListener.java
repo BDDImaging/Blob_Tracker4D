@@ -26,16 +26,13 @@ import snakes.InteractiveActiveContour_.ValueChange;
 			boolean oldState = parent.lookForMinima;
 
 			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				parent.lookForMinima = false;
+				parent.lookForMaxima = true;
 			else if (arg0.getStateChange() == ItemEvent.SELECTED)
-				parent.lookForMinima = true;
+				parent.lookForMaxima = false;
+			
 
-			if (parent.lookForMinima != oldState) {
-				while (parent.isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				parent.updatePreview(ValueChange.MINMAX);
-			}
+			parent.updatePreview(ValueChange.SHOWDOG);
+			
 		}
 	}
 	

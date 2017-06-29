@@ -89,7 +89,9 @@ public class DogListener implements ItemListener {
 			c.insets = new Insets(10, 10, 0, 0);
 			parent.panelSecond.add(sigmaText1, c);
 
-			
+			++c.gridy;
+			c.insets = new Insets(10, 0, 0, 0);
+			parent.panelSecond.add(min, c);
 
 			++c.gridy;
 			c.insets = new Insets(10, 0, 0, 0);

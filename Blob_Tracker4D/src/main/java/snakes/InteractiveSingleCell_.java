@@ -72,6 +72,7 @@ import ij.plugin.frame.RoiManager;
 import ij.process.ColorProcessor;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
+import listeners.SingleStandardMouseListener;
 import mpicbg.imglib.multithreading.SimpleMultiThreading;
 import mpicbg.imglib.util.Util;
 import net.imglib2.Cursor;
@@ -146,13 +147,12 @@ public class InteractiveSingleCell_ implements PlugIn {
 	float sizeYMax = 100f;
 	int sigmaInit = 30;
 	boolean pointinRoi;
-	boolean findBlobsViaMSER = false;
-	boolean findBlobsViaDOG = false;
+	boolean showMSER = false;
+	boolean showDOG = false;
 	boolean isComputing = false;
 	boolean lookForMaxima = true;
 	boolean lookForMinima = false;
-	boolean showMSER = false;
-	boolean showDOG = false;
+	
 	boolean enableSigma2 = false;
 	boolean darktobright = false;
 	boolean goingback;
@@ -162,7 +162,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	float maxVarMin = 0;
 	float maxVarMax = 1;
 	public int minDiversityInit = 1;
-	int minSizeInit = 1;
+	int minSizeInit = 20;
 	int maxSizeInit = 100;
 	ArrayList<double[]> AllmeanCovar;
 	Overlay overlay;
@@ -177,8 +177,8 @@ public class InteractiveSingleCell_ implements PlugIn {
 	
 	HashMap<Integer, double[]> ClickedPoints = new HashMap<Integer, double[]>();
 	int timeMin = 1;
-	long minSize = 1;
-	long maxSize = 1000;
+	long minSize = 20;
+	long maxSize = 100;
 	long minSizemin = 0;
 	long minSizemax = 100;
 	long maxSizemin = 100;
@@ -205,7 +205,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 	Color colorRadius = Color.yellow;
 	boolean savefile;
 	Roi selectedRoi;
-	
+	boolean mistake = false;
 	ImagePlus imp;
 	MouseListener ml, mlnew;
 	MouseListener removeml;
@@ -221,7 +221,11 @@ public class InteractiveSingleCell_ implements PlugIn {
 	int height = 0;
     int maxghost = 5;
 	int radiusSliderinit = 5;
-
+	final Label deltaText = new Label("Grey Level Seperation between Components = " + delta, Label.CENTER);
+	final Label maxVarText = new Label("Unstability Score = " + maxVar, Label.CENTER);
+	final Label minDiversityText = new Label("minDiversity = " + minDiversity, Label.CENTER);
+	final Label minSizeText = new Label("Min # of pixels inside MSER Ellipses = " + minSize, Label.CENTER);
+	final Label maxSizeText = new Label("Max # of pixels inside MSER Ellipses = " + maxSize, Label.CENTER);
 	public InteractiveSingleCell_() {
 
 	}
@@ -245,25 +249,58 @@ public class InteractiveSingleCell_ implements PlugIn {
 	public double getSigma2() {
 		return sigma2;
 	}
+	public void setInitialminDiversity(final float value) {
+		minDiversity = value;
+		minDiversityInit = util.ScrollbarUtils.computeScrollbarPositionFromValue(minDiversity, minDiversityMin, minDiversityMax,
+				scrollbarSize);
+	}
+
+	public double getInitialminDiversity(final float value) {
+
+		return minDiversity;
+
+	}
+
+	public void setInitialminSize(final int value) {
+		minSize = value;
+		minSizeInit = util.ScrollbarUtils.computeScrollbarPositionFromValue(minSize, minSizemin, minSizemax, scrollbarSize);
+	}
+
+	public double getInitialminSize(final int value) {
+
+		return minSize;
+
+	}
+
+	public void setInitialmaxSize(final int value) {
+		maxSize = value;
+		maxSizeInit = util.ScrollbarUtils.computeScrollbarPositionFromValue(maxSize, maxSizemin, maxSizemax, scrollbarSize);
+	}
+
+	public double getInitialmaxSize(final int value) {
+
+		return maxSize;
+
+	}
 
 	public double getThreshold() {
 		return threshold;
 	}
 
-	public boolean getFindBlobsViaMSER() {
-		return findBlobsViaMSER;
+	public boolean getshowMSER() {
+		return showMSER;
 	}
 
-	public void setFindBlobsViaMSER(final boolean findBlobsViaMSER) {
-		this.findBlobsViaMSER = findBlobsViaMSER;
+	public void setshowMSER(final boolean showMSER) {
+		this.showMSER = showMSER;
 	}
 
-	public boolean getFindBlobsViaDOG() {
-		return findBlobsViaDOG;
+	public boolean getshowDOG() {
+		return showDOG;
 	}
 
-	public void setFindBlobsViaDOG(final boolean findBlobsViaDOG) {
-		this.findBlobsViaDOG = findBlobsViaDOG;
+	public void setshowDOG(final boolean showDOG) {
+		this.showDOG = showDOG;
 	}
 
 	public double getThresholdMin() {
@@ -297,10 +334,33 @@ public class InteractiveSingleCell_ implements PlugIn {
 		thresholdInit = util.ScrollbarUtils.computeScrollbarPositionFromValue(threshold, thresholdMin, thresholdMax,
 				scrollbarSize);
 	}
+	public void setInitialmaxVar(final float value) {
+		maxVar = value;
+		maxVarInit = util.ScrollbarUtils.computeScrollbarPositionFromValue(maxVar , maxVarMin, maxVarMax, scrollbarSize);
+	}
 
+	public double getInitialmaxVar(final float value) {
+
+		return maxVar;
+
+	}
+	public void setInitialDelta(final float value) {
+		delta = value;
+		deltaInit = util.ScrollbarUtils.computeScrollbarPositionFromValue(delta, deltaMin, deltaMax, scrollbarSize);
+	}
+
+	public double getInitialDelta(final float value) {
+
+		return delta;
+
+	}
 	@Override
 	public void run(String arg) {
-
+		setInitialmaxVar(maxVarInit);
+		setInitialDelta(deltaInit);
+		setInitialminDiversity(minDiversityInit);
+		setInitialmaxSize(maxSizeInit);
+		setInitialminSize(minSizeInit);
 		ClickedPoints.put(0, null);
 		Rois = new ArrayList<Roi>();
 		peaks = new ArrayList<RefinedPeak<Point>>();
@@ -369,8 +429,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 	 *            - what did change
 	 */
 
-	protected void updatePreview(final ValueChange change) {
-
+	public void updatePreview(final ValueChange change) {
+	
+		
 		RoiManager roimanager = RoiManager.getInstance();
 
 		if (roimanager == null) {
@@ -402,6 +463,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 		}
 
 		if (change == ValueChange.THIRDDIMTrack) {
+			
 			if ( imp == null )
 				imp = ImageJFunctions.show(CurrentView);
 			else
@@ -627,13 +689,6 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 			newimg = util.FindersUtils.copytoByteImage(currentimg);
 
-			// Get local Minima in scale space to get Max rho-theta points
-
-			threshold = (float) getThreshold();
-
-			thresholdMax = (float) getThresholdMax();
-
-			thresholdMin = (float) getThresholdMin();
 		}
 
 		if (change == ValueChange.SHOWMSER) {
@@ -825,8 +880,8 @@ public class InteractiveSingleCell_ implements PlugIn {
 		panelCont.add(panelThird, "3");
 		CheckboxGroup Finders = new CheckboxGroup();
 
-		final Checkbox mser = new Checkbox("MSER", Finders, findBlobsViaMSER);
-		final Checkbox dog = new Checkbox("DoG", Finders, findBlobsViaDOG);
+		final Checkbox mser = new Checkbox("MSER", Finders, showMSER);
+		final Checkbox dog = new Checkbox("DoG", Finders, showDOG);
         final Checkbox Filesaver = new Checkbox("Save results to file (optional)");
 		final JButton Reset = new JButton("Restart");
 		final GridBagLayout layout = new GridBagLayout();
@@ -848,9 +903,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 		++c.gridy;
 		panelFirst.add(Ends, c);
 
-	//	++c.gridy;
-	//	c.insets = new Insets(10, 10, 0, 0);
-	//	panelFirst.add(mser, c);
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelFirst.add(mser, c);
 
 		++c.gridy;
 		c.insets = new Insets(10, 10, 0, 0);
@@ -982,7 +1037,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			CardLayout cl = (CardLayout) panelCont.getLayout();
 			cl.next(panelCont);
 			
-			new DisplayBlobsListener().actionPerformed(null);
+			Display();
 			
 			if(showDOG)
 				updatePreview(ValueChange.SHOWDOG);
@@ -996,14 +1051,14 @@ public class InteractiveSingleCell_ implements PlugIn {
 	protected class MserListener implements ItemListener {
 		@Override
 		public void itemStateChanged(final ItemEvent arg0) {
-			boolean oldState = findBlobsViaMSER;
+			boolean oldState = showMSER;
 
 			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				findBlobsViaMSER = false;
+				showMSER = false;
 			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
-				findBlobsViaMSER = true;
-				findBlobsViaDOG = false;
+				showMSER = true;
+				showDOG = false;
 				updatePreview(ValueChange.ROI);
 
 				panelSecond.removeAll();
@@ -1014,6 +1069,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				panelSecond.setLayout(layout);
 				final Label Name = new Label("Step 2", Label.CENTER);
 				panelSecond.add(Name, c);
+				final JButton openagain = new JButton("Active image closed by mistake, reopen");
 
 				final Scrollbar deltaS = new Scrollbar(Scrollbar.HORIZONTAL, deltaInit, 10, 0, 10 + scrollbarSize);
 				final Scrollbar maxVarS = new Scrollbar(Scrollbar.HORIZONTAL, maxVarInit, 10, 0, 10 + scrollbarSize);
@@ -1035,11 +1091,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 
 				final Checkbox min = new Checkbox("Look for Minima ", darktobright);
 				final Button ClickFast = new Button("Click here to choose a cell, then click on image");
-				final Label deltaText = new Label("delta = ", Label.CENTER);
-				final Label maxVarText = new Label("maxVar = ", Label.CENTER);
-				final Label minDiversityText = new Label("minDiversity = ", Label.CENTER);
-				final Label minSizeText = new Label("MinSize = ", Label.CENTER);
-				final Label maxSizeText = new Label("MaxSize = ", Label.CENTER);
+				
 				final Label MSparam = new Label("Determine MSER parameters");
 				final Button Confirm = new Button("Confirm your selection");
 				MSparam.setBackground(new Color(1, 0, 1));
@@ -1097,14 +1149,15 @@ public class InteractiveSingleCell_ implements PlugIn {
 				c.insets = new Insets(10, 10, 0, 0);
 				panelSecond.add(maxSizeS, c);
 
-				++c.gridy;
-				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(min, c);
+
+			//	++c.gridy;
+			//	c.insets = new Insets(10, 10, 0, 0);
+			//	panelSecond.add(ComputeTree, c);
 
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 0);
-				panelSecond.add(ComputeTree, c);
-
+				panelSecond.add(openagain, c);
+				
 		//		++c.gridy;
 		//		c.insets = new Insets(10, 10, 0, 0);
 		//		panelSecond.add(ClickFast, c);
@@ -1127,22 +1180,17 @@ public class InteractiveSingleCell_ implements PlugIn {
 				maxSizeS.addAdjustmentListener(
 						new maxSizeListener(maxSizeText, maxSizemin, maxSizemax, scrollbarSize, maxSizeS));
 
-				min.addItemListener(new DarktobrightListener());
 				ComputeTree.addActionListener(new ComputeTreeListener());
 				ClickFast.addActionListener(new chooseblobListener());
 				Confirm.addActionListener(new ConfirmListener());
+				openagain.addActionListener(new OpenagainListener());
 				panelSecond.repaint();
 				panelSecond.validate();
 				Cardframe.pack();
 
 			}
 
-			if (findBlobsViaMSER != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.FindBlobsVia);
-			}
+			
 		}
 	}
 
@@ -1158,8 +1206,8 @@ public class InteractiveSingleCell_ implements PlugIn {
 				savefile = true;
 				panelFirst.removeAll();
 				CheckboxGroup Finders = new CheckboxGroup();
-				final Checkbox mser = new Checkbox("MSER", Finders, findBlobsViaMSER);
-			final Checkbox dog = new Checkbox("DoG", Finders, findBlobsViaDOG);
+				final Checkbox mser = new Checkbox("MSER", Finders, showMSER);
+			final Checkbox dog = new Checkbox("DoG", Finders, showDOG);
 
 			final JButton ChooseWorkspace = new JButton("Choose Directory to save results in");
 			final JLabel outputfilename = new JLabel("Enter output filename: ");
@@ -1251,13 +1299,13 @@ public class InteractiveSingleCell_ implements PlugIn {
 		@Override
 		public void itemStateChanged(final ItemEvent arg0) {
 
-			boolean oldState = findBlobsViaDOG;
+			boolean oldState = showDOG;
 			if (arg0.getStateChange() == ItemEvent.DESELECTED)
-				findBlobsViaDOG = false;
+				showDOG = false;
 			else if (arg0.getStateChange() == ItemEvent.SELECTED) {
 
-				findBlobsViaDOG = true;
-				findBlobsViaMSER = false;
+				showDOG = true;
+				showMSER = false;
 				updatePreview(ValueChange.ROI);
 
 				panelSecond.removeAll();
@@ -1281,6 +1329,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 				final int sigma2init = util.ScrollbarUtils.computeScrollbarPositionFromValue(sigma2, sigmaMin, sigmaMax,
 						scrollbarSize);
 				final Scrollbar sigma2S = new Scrollbar(Scrollbar.HORIZONTAL, sigma2init, 10, 0, 10 + scrollbarSize);
+				final JButton openagain = new JButton("Active image closed by mistake, reopen");
 
 				final Label sigmaText1 = new Label("Sigma 1 = " + sigma, Label.CENTER);
 				final Label sigmaText2 = new Label("Sigma 2 = " + sigma2, Label.CENTER);
@@ -1322,10 +1371,10 @@ public class InteractiveSingleCell_ implements PlugIn {
 				++c.gridy;
 				c.insets = new Insets(10, 10, 0, 0);
 				panelSecond.add(thresholdText, c);
-
 				++c.gridy;
-				c.insets = new Insets(0, 180, 0, 180);
-				panelSecond.add(DisplayBlobs, c);
+				c.insets = new Insets(10, 10, 0, 0);
+				panelSecond.add(openagain, c);
+			
 
 		//		++c.gridy;
 		//		c.insets = new Insets(10, 0, 0, 0);
@@ -1339,23 +1388,19 @@ public class InteractiveSingleCell_ implements PlugIn {
 				sigma1.addAdjustmentListener(
 						new SigmaListener(sigmaText1, sigmaMin, sigmaMax, scrollbarSize, sigma1, sigma2S, sigmaText2));
 
-				thresholdS.addAdjustmentListener(new ThresholdListener(thresholdText, thresholdMin, thresholdMax));
+				thresholdS.addAdjustmentListener(new ThresholdListener(thresholdText, thresholdMin, thresholdMax, scrollbarSize ,thresholdS));
 				min.addItemListener(new MinListener());
 				max.addItemListener(new MaxListener());
 				ClickFast.addActionListener(new chooseblobListener());
-				DisplayBlobs.addActionListener(new DisplayBlobsListener());
+				//DisplayBlobs.addActionListener(new DisplayBlobsListener());
 				Confirm.addActionListener(new ConfirmListener());
+				openagain.addActionListener(new OpenagainListener());
 				panelSecond.repaint();
 				panelSecond.validate();
 				Cardframe.pack();
 			}
 
-			if (findBlobsViaDOG != oldState) {
-				while (isComputing)
-					SimpleMultiThreading.threadWait(10);
-
-				updatePreview(ValueChange.FindBlobsVia);
-			}
+			
 		}
 
 	}
@@ -2250,6 +2295,10 @@ public class InteractiveSingleCell_ implements PlugIn {
 		
 		imp.getCanvas().addMouseListener(ml = new MouseListener() {
 
+			
+			
+			
+			
 			final ImageCanvas canvas = imp.getWindow().getCanvas();
 
 			RoiManager roim = RoiManager.getInstance();
@@ -2312,21 +2361,46 @@ public class InteractiveSingleCell_ implements PlugIn {
 	}
 	
 	
+	public boolean Openagain() {
+		
+		GenericDialog gd = new GenericDialog("Open last closed image");
+		
+		gd.addCheckbox("Closing the image was a mistake", true);
+		
+		
+		
+		
+		mistake = true;
+		
+		return !gd.wasCanceled();
+	}
+	
+	
 	public void DragMouse(){
 		
 		
-		
+	
 		
 		imp.getCanvas().addMouseMotionListener( new MouseMotionListener() {
 			
 			final ImageCanvas canvas = imp.getWindow().getCanvas();
 			Roi lastnearest = null;
-
+  
+			
+	
+			
+			
 			@Override
 			public void mouseMoved(MouseEvent e) {
+				
+				
+				
+			
+				
 				int x = canvas.offScreenX(e.getX());
                 int y = canvas.offScreenY(e.getY());
 
+              
                 final HashMap<Integer,  double[] > loc = new HashMap<Integer, double[]>();
                 
                 loc.put(0, new double[] { x, y });
@@ -2361,115 +2435,152 @@ public class InteractiveSingleCell_ implements PlugIn {
 		
 	}
 	
-	protected class DisplayBlobsListener implements ActionListener {
+	
+	public void Display(){
+		if(showDOG)
+		updatePreview(ValueChange.SHOWDOG);
+		if(showMSER)
+			updatePreview(ValueChange.SHOWMSER);
+		
+
+		DragMouse();
+	
+		ClickMouse();
+	
+
+		panelThird.removeAll();
+		/* Instantiation */
+		final GridBagLayout layout = new GridBagLayout();
+		final GridBagConstraints c = new GridBagConstraints();
+		panelThird.setLayout(layout);
+
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 0;
+		c.weightx = 1;
+		c.weighty = 3.5;
+
+		final Label Name = new Label("Step 3", Label.CENTER);
+		panelThird.add(Name, c);
+		final Label CurrentFrame = new Label("Current Time Frame");
+		final Scrollbar radiusbar = new Scrollbar(Scrollbar.HORIZONTAL, radiusInit, 10, 0, 10 + scrollbarSize);
+		final Label AdjustRadi = new Label("Adjust Cell radius");
+		radius = util.ScrollbarUtils.computeValueFromScrollbarPosition(radiusInit, radiusMin, radiusMax,
+				scrollbarSize);
+		
+		AdjustRadi.setForeground(new Color(255, 255, 255));
+		AdjustRadi.setBackground(new Color(1, 0, 1));
+
+		CurrentFrame.setForeground(new Color(255, 255, 255));
+		CurrentFrame.setBackground(new Color(1, 0, 1));
+		
+		final JButton openagain = new JButton("Active image closed by mistake, reopen");
+		final JButton ConfirmSelection = new JButton("Confirm Selection");
+		final Button JumpFrame = new Button("Confirm and Go to Next Time Frame");
+		final Button SkipFrame = new Button("No good Cell found, Skip this Time Frame");
+		final Button JumpBackFrame = new Button("Go back a Time Frame to unselect");
+		final Button Done = new Button("Display Tracks and Save results");
+		final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
+		final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
+				thirdDimensionSize);
+		thirdDimensionslider = (int) util.ScrollbarUtils.computeValueFromScrollbarPosition(thirdDimensionsliderInit,
+				timeMin, thirdDimensionSize, thirdDimensionSize);
+		final Label sizeTextX = new Label("radius = " + radius, Label.CENTER);
+
+		
+		
+		
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelThird.add(AdjustRadi, c);
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelThird.add(radiusbar, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelThird.add(sizeTextX, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 10, 0, 0);
+		panelThird.add(CurrentFrame, c);
+		
+		++c.gridy;
+		panelThird.add(thirdDimensionsliderS, c);
+
+		++c.gridy;
+		panelThird.add(timeText, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		panelThird.add(JumpFrame, c);
+
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		panelThird.add(SkipFrame, c);
+		
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		panelThird.add(JumpBackFrame, c);
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		panelThird.add(openagain, c);
+		++c.gridy;
+		c.insets = new Insets(10, 175, 0, 175);
+		panelThird.add(Done, c);
+
+		radiusbar.addAdjustmentListener(
+				new radiusListener(sizeTextX, radiusMin, radiusMax, scrollbarSize, radiusbar));
+		ConfirmSelection.addActionListener(new OpenRTListener());
+	
+		thirdDimensionsliderS
+				.addAdjustmentListener(new thirdDimensionsliderListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+		JumpFrame.addActionListener(
+				new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+		JumpBackFrame.addActionListener(
+				new movebackInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+		SkipFrame.addActionListener(
+				new skipThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
+		Done.addActionListener(new DisplayRoiListener());
+		openagain.addActionListener(new OpenagainListener());
+		panelThird.repaint();
+		panelThird.validate();
+		Cardframe.pack();
+		
+		
+	}
+	
+	protected class OpenagainListener implements ActionListener {
 
 		@Override
-		public void actionPerformed(ActionEvent arg0) {
-			showDOG = true;
-			updatePreview(ValueChange.SHOWDOG);
+		public void actionPerformed(ActionEvent e) {
 			
-
-			DragMouse();
-		
-			ClickMouse();
-		
-	
-			panelThird.removeAll();
-			/* Instantiation */
-			final GridBagLayout layout = new GridBagLayout();
-			final GridBagConstraints c = new GridBagConstraints();
-			panelThird.setLayout(layout);
-
-			c.fill = GridBagConstraints.HORIZONTAL;
-			c.gridx = 0;
-			c.gridy = 0;
-			c.weightx = 1;
-			c.weighty = 3.5;
-
-			final Label Name = new Label("Step 3", Label.CENTER);
-			panelThird.add(Name, c);
-			final Label CurrentFrame = new Label("Current Time Frame");
-			final Scrollbar radiusbar = new Scrollbar(Scrollbar.HORIZONTAL, radiusInit, 10, 0, 10 + scrollbarSize);
-			final Label AdjustRadi = new Label("Adjust Cell radius");
-			radius = util.ScrollbarUtils.computeValueFromScrollbarPosition(radiusInit, radiusMin, radiusMax,
-					scrollbarSize);
+			if (imp.getWindow() == null){
+				// Open again
+				Openagain();
+				
+				if (mistake){
+					imp = ImageJFunctions.show(CurrentView);
+					
+					imp.updateAndDraw();
+					imp.setOverlay(overlay);
+					DragMouse();
+					
+					ClickMouse();
+				}
+			}
 			
-			AdjustRadi.setForeground(new Color(255, 255, 255));
-			AdjustRadi.setBackground(new Color(1, 0, 1));
-
-			CurrentFrame.setForeground(new Color(255, 255, 255));
-			CurrentFrame.setBackground(new Color(1, 0, 1));
-			
-			final JButton ConfirmSelection = new JButton("Confirm Selection");
-			final Button JumpFrame = new Button("Confirm and Go to Next Time Frame");
-			final Button SkipFrame = new Button("No good Cell found, Skip this Time Frame");
-			final Button JumpBackFrame = new Button("Go back a Time Frame to unselect");
-			final Button Done = new Button("Display Tracks and Save results");
-			final Label timeText = new Label("Time in framenumber= " + thirdDimensionslider, Label.CENTER);
-			final Scrollbar thirdDimensionsliderS = new Scrollbar(Scrollbar.HORIZONTAL, thirdDimensionsliderInit, 0, 0,
-					thirdDimensionSize);
-			thirdDimensionslider = (int) util.ScrollbarUtils.computeValueFromScrollbarPosition(thirdDimensionsliderInit,
-					timeMin, thirdDimensionSize, thirdDimensionSize);
-			final Label sizeTextX = new Label("radius = " + radius, Label.CENTER);
-
-			++c.gridy;
-			c.insets = new Insets(10, 10, 0, 0);
-			panelThird.add(AdjustRadi, c);
-			++c.gridy;
-			c.insets = new Insets(10, 10, 0, 0);
-			panelThird.add(radiusbar, c);
-
-			++c.gridy;
-			c.insets = new Insets(10, 10, 0, 0);
-			panelThird.add(sizeTextX, c);
-			
-			++c.gridy;
-			c.insets = new Insets(10, 10, 0, 0);
-			panelThird.add(CurrentFrame, c);
-			
-			++c.gridy;
-			panelThird.add(thirdDimensionsliderS, c);
-
-			++c.gridy;
-			panelThird.add(timeText, c);
-
-			++c.gridy;
-			c.insets = new Insets(10, 175, 0, 175);
-			panelThird.add(JumpFrame, c);
-
-			++c.gridy;
-			c.insets = new Insets(10, 175, 0, 175);
-			panelThird.add(SkipFrame, c);
-			
-			++c.gridy;
-			c.insets = new Insets(10, 175, 0, 175);
-			panelThird.add(JumpBackFrame, c);
-
-			++c.gridy;
-			c.insets = new Insets(10, 175, 0, 175);
-			panelThird.add(Done, c);
-
-			radiusbar.addAdjustmentListener(
-					new radiusListener(sizeTextX, radiusMin, radiusMax, scrollbarSize, radiusbar));
-			ConfirmSelection.addActionListener(new OpenRTListener());
-		
-			thirdDimensionsliderS
-					.addAdjustmentListener(new thirdDimensionsliderListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
-			JumpFrame.addActionListener(
-					new moveInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
-			JumpBackFrame.addActionListener(
-					new movebackInThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
-			SkipFrame.addActionListener(
-					new skipThirdDimListener(thirdDimensionsliderS, timeText, timeMin, thirdDimensionSize));
-			Done.addActionListener(new DisplayRoiListener());
-			panelThird.repaint();
-			panelThird.validate();
-			Cardframe.pack();
-			
-			
-
 		}
+
+		
+		
+		
+		
+		
 	}
+	
+	
 
 	protected class MaxListener implements ItemListener {
 		@Override
@@ -2605,27 +2716,29 @@ public class InteractiveSingleCell_ implements PlugIn {
 	protected class ThresholdListener implements AdjustmentListener {
 		final Label label;
 		final float min, max;
-
-		public ThresholdListener(final Label label, final float min, final float max) {
+		final int scrollbarSize;
+		final Scrollbar scrollbar;
+		public ThresholdListener(final Label label, final float min, final float max, final int scrollbarSize, final Scrollbar scrollbar) {
 			this.label = label;
 			this.min = min;
 			this.max = max;
+			this.scrollbar = scrollbar;
+			this.scrollbarSize = scrollbarSize;
+			scrollbar.addMouseListener( new SingleStandardMouseListener( InteractiveSingleCell_.this, ValueChange.SHOWDOG ) );
+
+			Display();
 		}
 
 		@Override
 		public void adjustmentValueChanged(final AdjustmentEvent event) {
+		
 			threshold = util.ScrollbarUtils.computeValueFromScrollbarPosition(event.getValue(), min, max,
 					scrollbarSize);
+			scrollbar
+			.setValue(util.ScrollbarUtils.computeScrollbarPositionFromValue(threshold, min, max, scrollbarSize));
 			label.setText("Threshold = " + threshold);
 
-			if (!isComputing) {
-				updatePreview(ValueChange.THRESHOLD);
-			} else if (!event.getValueIsAdjusting()) {
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.THRESHOLD);
-			}
+		
 		}
 	}
 
@@ -2667,6 +2780,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 			this.sigmaScrollbar1 = sigmaScrollbar1;
 			this.sigmaScrollbar2 = sigmaScrollbar2;
 			this.sigmaText2 = sigmaText2;
+			sigmaScrollbar1.addMouseListener( new SingleStandardMouseListener( InteractiveSingleCell_.this, ValueChange.SHOWDOG ) );
+
+			Display();
 		}
 
 		@Override
@@ -2711,7 +2827,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 			this.scrollbarSize = scrollbarSize;
 
 			this.deltaScrollbar = deltaScrollbar;
+			deltaScrollbar.addMouseListener( new SingleStandardMouseListener( InteractiveSingleCell_.this, ValueChange.SHOWMSER ) );
 
+			Display();
 		}
 
 		@Override
@@ -2721,15 +2839,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 			deltaScrollbar
 					.setValue(util.ScrollbarUtils.computeScrollbarPositionFromValue(delta, min, max, scrollbarSize));
 
-			label.setText("Delta = " + delta);
+			label.setText(deltaText.getText());
 
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.DELTA);
-			}
+			
 		}
 	}
 
@@ -2792,6 +2904,10 @@ public class InteractiveSingleCell_ implements PlugIn {
 			this.scrollbarSize = scrollbarSize;
 
 			this.minsizeScrollbar = minsizeScrollbar;
+			
+			minsizeScrollbar.addMouseListener( new SingleStandardMouseListener( InteractiveSingleCell_.this, ValueChange.SHOWMSER ) );
+
+			Display();
 
 		}
 
@@ -2803,15 +2919,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 			minsizeScrollbar
 					.setValue(util.ScrollbarUtils.computeScrollbarPositionFromValue(minSize, min, max, scrollbarSize));
 
-			label.setText("MinSize = " + minSize);
+			label.setText(minSizeText.getText());
 
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.MINSIZE);
-			}
+		
 		}
 	}
 
@@ -2830,6 +2940,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 			this.scrollbarSize = scrollbarSize;
 
 			this.maxsizeScrollbar = maxsizeScrollbar;
+			maxsizeScrollbar.addMouseListener( new SingleStandardMouseListener( InteractiveSingleCell_.this, ValueChange.SHOWMSER ) );
+
+			Display();
 
 		}
 
@@ -2841,15 +2954,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 			maxsizeScrollbar
 					.setValue(util.ScrollbarUtils.computeScrollbarPositionFromValue(maxSize, min, max, scrollbarSize));
 
-			label.setText("MaxSize = " + maxSize);
+			label.setText(maxSizeText.getText());
 
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.MAXSIZE);
-			}
+		
 		}
 	}
 
@@ -2867,6 +2974,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 			this.max = max;
 			this.scrollbarSize = scrollbarSize;
 			this.maxVarScrollbar = maxVarScrollbar;
+			maxVarScrollbar.addMouseListener( new SingleStandardMouseListener( InteractiveSingleCell_.this, ValueChange.SHOWMSER ) );
+
+			Display();
 
 		}
 
@@ -2877,15 +2987,9 @@ public class InteractiveSingleCell_ implements PlugIn {
 			maxVarScrollbar.setValue(
 					util.ScrollbarUtils.computeScrollbarPositionFromValue((float) maxVar, min, max, scrollbarSize));
 
-			label.setText("MaxVar = " + maxVar);
+			label.setText(maxVarText.getText());
 
-			// if ( !event.getValueIsAdjusting() )
-			{
-				while (isComputing) {
-					SimpleMultiThreading.threadWait(10);
-				}
-				updatePreview(ValueChange.MAXVAR);
-			}
+			
 		}
 	}
 
@@ -2903,7 +3007,10 @@ public class InteractiveSingleCell_ implements PlugIn {
 			this.max = max;
 			this.scrollbarSize = scrollbarSize;
 			this.minDiversityScrollbar = minDiversityScrollbar;
+			minDiversityScrollbar.addMouseListener( new SingleStandardMouseListener( InteractiveSingleCell_.this, ValueChange.SHOWMSER ) );
 
+			Display();
+			
 		}
 
 		@Override
@@ -2914,7 +3021,7 @@ public class InteractiveSingleCell_ implements PlugIn {
 			minDiversityScrollbar.setValue(util.ScrollbarUtils.computeScrollbarPositionFromValue((float) minDiversity,
 					min, max, scrollbarSize));
 
-			label.setText("MinDiversity = " + minDiversity);
+			label.setText(minDiversityText.getText());
 
 			// if ( !event.getValueIsAdjusting() )
 			{

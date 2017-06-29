@@ -166,9 +166,7 @@ public class SegDogListener implements ItemListener {
 			c.insets = new Insets(0, 170, 0, 75);
 			parent.panelSecond.add(min, c);
 
-			++c.gridy;
-			c.insets = new Insets(0, 170, 0, 75);
-			parent.panelSecond.add(max, c);
+			
 
 		
 
