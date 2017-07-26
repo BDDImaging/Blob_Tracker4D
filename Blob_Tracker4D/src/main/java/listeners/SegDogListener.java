@@ -176,7 +176,7 @@ public class SegDogListener implements ItemListener {
 			sigma2S.addAdjustmentListener(
 					new Sigma2Listener(parent, parent.sigmaMin, parent.sigmaMax, parent.scrollbarSize, sigma2S, sigmaText2));
 			thresholdSsec
-					.addAdjustmentListener(new ThresholdListener(parent, thresholdsecText, parent.thresholdMin, parent.thresholdMax));
+					.addAdjustmentListener(new ThresholdListener(parent, thresholdsecText, parent.thresholdMin, parent.thresholdMax, thresholdSsec));
 			min.addItemListener(new MinListener(parent));
 			max.addItemListener(new MaxListener(parent));
 			DisplayBlobs.addActionListener(new DisplaysegBlobsListener(parent));

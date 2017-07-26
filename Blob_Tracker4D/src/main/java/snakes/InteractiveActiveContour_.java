@@ -58,6 +58,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -3574,11 +3575,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 				
 				  
 				JTable table = new JTable(userTableModel);
-			   
-				 
-			
+				
+				 JScrollPane scrollPane = new JScrollPane(table);
+				 scrollPane.setVerticalScrollBarPolicy(1);
 
-			JComboBox<String> cbtrack = new JComboBox<String>(choicestrack);
 
 			Done.setBackground(new Color(1, 0, 1));
 			Done.setForeground(new Color(255, 255, 255));
@@ -3588,10 +3588,11 @@ public class InteractiveActiveContour_ implements PlugIn {
 			c.insets = new Insets(10, 10, 0, 50);
 			panelFifth.add(lbl, c);
 
+
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 50);
-			panelFifth.add(table, c);
-
+			panelFifth.add(scrollPane, c);
+			
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 50);
 			panelFifth.add(Done, c);

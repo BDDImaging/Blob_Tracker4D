@@ -108,7 +108,7 @@ public class DogListener implements ItemListener {
 					new SigmaListener(parent, sigmaText1, parent.sigmaMin, parent.sigmaMax, parent.scrollbarSize, sigma1, sigma2S, sigmaText2));
 			sigma2S.addAdjustmentListener(
 					new Sigma2Listener(parent, parent.sigmaMin, parent.sigmaMax, parent.scrollbarSize, sigma2S, sigmaText2));
-			thresholdS.addAdjustmentListener(new ThresholdListener(parent, thresholdText, parent.thresholdMin, parent.thresholdMax));
+			thresholdS.addAdjustmentListener(new ThresholdListener(parent, thresholdText, parent.thresholdMin, parent.thresholdMax, thresholdS));
 			min.addItemListener(new MinListener(parent));
 			max.addItemListener(new MaxListener(parent));
 			DisplayBlobs.addActionListener(new DisplayBlobsListener(parent));
