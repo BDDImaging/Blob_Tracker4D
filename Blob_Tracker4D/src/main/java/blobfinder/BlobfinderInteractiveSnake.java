@@ -46,7 +46,6 @@ import ij.io.RoiEncoder;
 import ij.plugin.frame.RoiManager;
 import ij.process.ColorProcessor;
 import ij.process.ImageProcessor;
-import mpicbg.spim.io.IOFunctions;
 import mserMethods.GetDelta;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
@@ -520,7 +519,7 @@ public class BlobfinderInteractiveSnake implements Blobfinder {
 			// each iteration
 			dist = snake.process();
 
-			if (Math.abs(dist0 - dist) < 0.01){
+			if (Math.abs(dist0 - dist) < 0.1){
 				
 				term++;
 			}

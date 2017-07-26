@@ -42,14 +42,14 @@ public class ProgressAll extends SwingWorker<Void, Void>  {
 		int next = parent.thirdDimension;
 		int nextZ = parent.fourthDimension;
 		if (parent.snakestack != null) {
-			for (int index = 1; index < parent.snakestack.size(); ++index) {
+			for (int index = 1; index < parent.snakestack.getSize(); ++index) {
 
 				parent.snakestack.deleteSlice(index);
 			}
 		}
 
 		if (parent.measuresnakestack != null) {
-			for (int index = 1; index < parent.measuresnakestack.size(); ++index) {
+			for (int index = 1; index < parent.measuresnakestack.getSize(); ++index) {
 
 				parent.measuresnakestack.deleteSlice(index);
 			}

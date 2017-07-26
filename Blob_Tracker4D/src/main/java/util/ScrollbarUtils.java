@@ -1,7 +1,6 @@
 package util;
 
 import mpicbg.imglib.util.Util;
-import mpicbg.spim.registration.detection.DetectionSegmentation;
 
 public class ScrollbarUtils {
 
@@ -27,10 +26,21 @@ public class ScrollbarUtils {
 	}
 	
 	public static float computeSigma2(final float sigma1, final int sensitivity) {
-		final float k = (float) DetectionSegmentation.computeK(sensitivity);
-		final float[] sigma = DetectionSegmentation.computeSigma(k, sigma1);
+		final float k = (float) computeK(sensitivity);
+		final float[] sigma = computeSigma(k, sigma1);
 
 		return sigma[1];
 	}
-	
+	public static double computeK( final float stepsPerOctave ) { return Math.pow( 2f, 1f / stepsPerOctave ); }
+	public static double computeK( final int stepsPerOctave ) { return Math.pow( 2f, 1f / stepsPerOctave ); }
+	public static float computeKWeight( final float k ) { return 1.0f / (k - 1.0f); }
+	public static float[] computeSigma( final float k, final float initialSigma )
+	{
+		final float[] sigma = new float[ 2 ];
+
+		sigma[ 0 ] = initialSigma;
+		sigma[ 1 ] = sigma[ 0 ] * k;
+
+		return sigma;
+	}
 }

@@ -7,9 +7,8 @@ import mpicbg.spim.data.sequence.SetupImgLoader;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
-import spim.fiji.spimdata.SpimData2;
-import spim.fiji.spimdata.XmlIoSpimData2;
 
+/*
 public class LoadXML
 {
 public static SpimData2 loadSpimData( final File xml ) throws SpimDataException
@@ -32,3 +31,4 @@ SpimData2 d = loadSpimData( new File( "/home/preibisch/Documents/Microscopy/SPIM
 getImg( d, 0, 50 );
 }
 }
+*/

@@ -22,6 +22,7 @@ import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
@@ -57,12 +58,14 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.table.DefaultTableModel;
 
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -116,7 +119,6 @@ import listeners.SegMserListener;
 import mpicbg.imglib.image.Image;
 import mpicbg.imglib.multithreading.SimpleMultiThreading;
 import mpicbg.imglib.util.Util;
-import mpicbg.spim.registration.detection.DetectionSegmentation;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.IterableInterval;
@@ -305,7 +307,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 	public int deltaInit = 10;
 	public int maxVarInit = 1;
 	public int Maxlabel;
-	public int alphaInit = 0;
+	public int alphaInit = 1;
 	public int betaInit = 0;
 	public int minSizeInit = 1;
 	public int maxSizeInit = 100;
@@ -621,6 +623,28 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	}
 
+	public void setInitialAlpha(final float value) {
+		alpha = value;
+		alphaInit = computeScrollbarPositionFromValue(alpha, alphaMin, alphaMax, scrollbarSize);
+	}
+
+	public double getInitialAlpha(final float value) {
+
+		return alpha;
+
+	}
+	
+	public void setInitialBeta(final float value) {
+		beta = value;
+		betaInit = computeScrollbarPositionFromValue(beta, betaMin, betaMax, scrollbarSize);
+	}
+
+	public double getInitialBeta(final float value) {
+
+		return beta;
+
+	}
+	
 	public void setInitialsearchradius(final float value) {
 		initialSearchradius = value;
 		initialSearchradiusInit = computeScrollbarPositionFromValue(initialSearchradius, initialSearchradiusMin,
@@ -663,7 +687,8 @@ public class InteractiveActiveContour_ implements PlugIn {
 		AllSelectedcenter = new ArrayList<Pair<Integer, double[]>>();
 		setInitialUnstability_Score(maxVarInit);
 		setInitialDelta(deltaInit);
-
+		setInitialAlpha(alphaInit);
+		setInitialBeta(betaInit);
 		setInitialminDiversity(minDiversityInit);
 		setInitialmaxSize(maxSizeInit);
 		setInitialminSize(minSizeInit);
@@ -2015,10 +2040,21 @@ public class InteractiveActiveContour_ implements PlugIn {
 			return AllSliceSnakes.get(AllSliceSnakes.size() - 1);
 
 	}
+	public static double computeK( final float stepsPerOctave ) { return Math.pow( 2f, 1f / stepsPerOctave ); }
+	public static double computeK( final int stepsPerOctave ) { return Math.pow( 2f, 1f / stepsPerOctave ); }
+	public static float computeKWeight( final float k ) { return 1.0f / (k - 1.0f); }
+	public static float[] computeSigma( final float k, final float initialSigma )
+	{
+		final float[] sigma = new float[ 2 ];
 
+		sigma[ 0 ] = initialSigma;
+		sigma[ 1 ] = sigma[ 0 ] * k;
+
+		return sigma;
+	}
 	public float computeSigma2(final float sigma1, final int sensitivity) {
-		final float k = (float) DetectionSegmentation.computeK(sensitivity);
-		final float[] sigma = DetectionSegmentation.computeSigma(k, sigma1);
+		final float k = (float) computeK(sensitivity);
+		final float[] sigma = computeSigma(k, sigma1);
 
 		return sigma[1];
 	}
@@ -2532,10 +2568,10 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 	public class TrackDisplayListener implements ActionListener {
 
-		final JComboBox<String> cb;
+		final JTable cb;
 		final RandomAccessibleInterval<FloatType> seedimg;
 
-		public TrackDisplayListener(JComboBox<String> cb, RandomAccessibleInterval<FloatType> seedimg) {
+		public TrackDisplayListener(JTable cb, RandomAccessibleInterval<FloatType> seedimg) {
 
 			this.cb = cb;
 			this.seedimg = seedimg;
@@ -2545,7 +2581,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 		@Override
 		public void actionPerformed(final ActionEvent arg0) {
 
-			displaySelectedTrack = cb.getSelectedIndex();
+			displaySelectedTrack = cb.getSelectedRow();
 
 			ImagePlus displayimp, displaymeasureimp;
 
@@ -2577,16 +2613,15 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			if (displaySelectedTrack == 0) {
 
-				/*
+				
 				DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw, true, 0);
 				totaldisplaytracks.getImp();
 
 				DisplaymodelGraph totaldisplaytracksmeasure = new DisplaymodelGraph(displaymeasureimp, graph, colorDraw,
 						true, 0);
 				totaldisplaytracksmeasure.getImp();
-               */
+               
 				
-				IJ.log(" " + " Not a good idea to display all tracks ");
 			}
 
 			else {
@@ -3519,6 +3554,29 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 				choicestrack[index + 1] = "Track " + currenttrack;
 			}
+			
+			DefaultTableModel userTableModel = new DefaultTableModel(new Object[]{"Track ID"}, 0) {
+			    @Override
+			    public boolean isCellEditable(int row, int column) {
+			        return false;
+			    }
+			};
+			
+		
+			userTableModel.addRow(new String[]{"Display All"});
+				for (int index = 0; index < IDALL.size(); ++index) {
+					String[] currenttrack = {Double.toString(IDALL.get(index))};
+					userTableModel.addRow(currenttrack);
+					
+					
+				}
+				
+				
+				  
+				JTable table = new JTable(userTableModel);
+			   
+				 
+			
 
 			JComboBox<String> cbtrack = new JComboBox<String>(choicestrack);
 
@@ -3532,7 +3590,7 @@ public class InteractiveActiveContour_ implements PlugIn {
 
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 50);
-			panelFifth.add(cbtrack, c);
+			panelFifth.add(table, c);
 
 			++c.gridy;
 			c.insets = new Insets(10, 10, 0, 50);
@@ -3542,7 +3600,19 @@ public class InteractiveActiveContour_ implements PlugIn {
 			c.insets = new Insets(10, 10, 0, 50);
 			panelFifth.add(Exit, c);
 
-			cbtrack.addActionListener(new TrackDisplayListener(cbtrack, originalimgA));
+			table.addMouseListener(new MouseAdapter() {
+				  public void mouseClicked(MouseEvent e) {
+				    if (e.getClickCount() == 1) {
+				      JTable target = (JTable)e.getSource();
+				      int row = target.getSelectedRow();
+				      int column = target.getSelectedColumn();
+				      // do some action if appropriate column
+				      
+				      displayclicked(row);
+				    }
+				  }
+				});
+			
 			Exit.addActionListener(new FinishedButtonListener(Cardframe, true));
 
 			panelFifth.repaint();
@@ -3552,7 +3622,75 @@ public class InteractiveActiveContour_ implements PlugIn {
 		}
 
 	}
+public void displayclicked(final int trackindex){
+		
+		ImagePlus displayimp, displaymeasureimp;
 
+		displayimp = ImageJFunctions.show(originalimgA);
+		displaymeasureimp = ImageJFunctions.show(originalimgB);
+		displaymeasureimp.setTitle("Display Tracks on Measurement image");
+		displayimp.setTitle("Display Tracks");
+
+		Overlay o = displayimp.getOverlay();
+
+		if (displayimp.getOverlay() == null) {
+			o = new Overlay();
+			displayimp.setOverlay(o);
+		}
+
+		o.clear();
+
+		Overlay osec = displayimp.getOverlay();
+
+		if (displayimp.getOverlay() == null) {
+			osec = new Overlay();
+			displaymeasureimp.setOverlay(osec);
+		}
+
+		osec.clear();
+
+		TrackModel model = new TrackModel(graph);
+		model.getDirectedNeighborIndex();
+
+	
+		if (trackindex == 0) {
+
+			
+			DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw, true, 0);
+			totaldisplaytracks.getImp();
+
+			DisplaymodelGraph totaldisplaytracksmeasure = new DisplaymodelGraph(displaymeasureimp, graph, colorDraw,
+					true, 0);
+			totaldisplaytracksmeasure.getImp();
+           
+			
+		}
+
+		else {
+		
+
+			for (int index = 0; index < IDALL.size(); ++index) {
+				if (trackindex == index + 1) {
+
+					DisplaymodelGraph totaldisplaytracks = new DisplaymodelGraph(displayimp, graph, colorDraw,
+							false, trackindex);
+					totaldisplaytracks.getImp();
+
+					DisplaymodelGraph totaldisplaymeasuretracks = new DisplaymodelGraph(displaymeasureimp, graph,
+							colorDraw, false, trackindex);
+					totaldisplaymeasuretracks.getImp();
+
+				}
+
+			
+
+		}
+
+		}
+		
+		
+	}
+	
 	public void saveResultsToExcel(String xlFile, ResultsTable rt) {
 
 		FileOutputStream xlOut = null;
